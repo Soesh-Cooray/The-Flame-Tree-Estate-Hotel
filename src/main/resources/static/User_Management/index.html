@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Flame Tree Estate Hotel | Internal Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div class="badge">Internal Access</div>
+      <h1>The Flame Tree Estate Hotel</h1>
+      <p class="lede">Operations and Inventory Management Suite for trusted staff.</p>
+      <div class="chips">
+        <span>Secure sign-in</span>
+        <span>Role-aware access</span>
+        <span>24/7 availability</span>
+      </div>
+    </div>
+
+    <main class="card">
+      <header class="card__header">
+        <div class="eyebrow">Staff Portal</div>
+        <h2>Choose your role, then sign in</h2>
+        <p class="hint">Access is limited to authorized personnel of The Flame Tree Estate Hotel.</p>
+        <p class="role-note" id="roleNote" aria-live="polite"></p>
+      </header>
+
+      <form class="form" id="loginForm" action="#" method="post">
+        <fieldset class="fieldset">
+          <legend>Who are you?</legend>
+          <div class="role-grid">
+            <label class="role-option">
+              <input type="radio" name="role" value="Manager" required />
+              <span>Manager</span>
+            </label>
+            <label class="role-option">
+              <input type="radio" name="role" value="Housekeeping Staff" />
+              <span>Housekeeping Staff</span>
+            </label>
+            <label class="role-option">
+              <input type="radio" name="role" value="Inventory/Store Manager" />
+              <span>Inventory / Store Manager</span>
+            </label>
+            <label class="role-option">
+              <input type="radio" name="role" value="Maintenance Staff" />
+              <span>Maintenance Staff</span>
+            </label>
+            <label class="role-option">
+              <input type="radio" name="role" value="Staff Supervisor" />
+              <span>Staff Supervisor</span>
+            </label>
+            <label class="role-option">
+              <input type="radio" name="role" value="Front Desk / Reception Staff" />
+              <span>Front Desk / Reception Staff</span>
+            </label>
+            <label class="role-option">
+              <input type="radio" name="role" value="Supplier &amp; Purchase Management" />
+              <span>Supplier &amp; Purchase Management</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" autocomplete="username" required placeholder="your.name" />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+        </div>
+
+        <div class="actions">
+          <label class="remember">
+            <input type="checkbox" name="remember" />
+            <span>Remember me on this device</span>
+          </label>
+          <a class="link" href="#">Need help signing in?</a>
+        </div>
+
+        <button type="submit" class="primary-btn">Sign in</button>
+      </form>
+
+      <footer class="footer">
+        <p>By signing in you agree to follow property SOPs and data privacy guidelines.</p>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const roleInputs = document.querySelectorAll('input[name="role"]');
+    const roleNote = document.getElementById('roleNote');
+
+    const managerMessage = 'Manager access includes user account creation, role assignment, account deactivation, and secure role-based access control.';
+    const nonManagerMessage = 'You selected a non-manager role. Please continue sign-in to access your assigned area.';
+
+    roleInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        roleNote.textContent = input.value === 'Manager' ? managerMessage : nonManagerMessage;
+      });
+    });
+
+    loginForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const selectedRole = document.querySelector('input[name="role"]:checked');
+
+      if (!selectedRole) {
+        roleNote.textContent = 'Please select a role to continue.';
+        return;
+      }
+
+      const roleRoutes = {
+        'Manager': 'manager-dashboard.html',
+        'Housekeeping Staff': '../Room_&_Housekeeping_Management/housekeeping.html',
+        'Inventory/Store Manager': '../Inventory_Management/Inventory.html',
+        'Maintenance Staff': '../Maintenance_and_Damaged_Item_Tracking/index.html',
+        'Front Desk / Reception Staff': '../Guest_Services_Request_Management/Guest Service.html',
+        'Supplier & Purchase Management': '../Supplier_&_Purchase_Management/Supplier.html'
+      };
+
+      const route = roleRoutes[selectedRole.value];
+      if (route) {
+        window.location.href = route;
+        return;
+      }
+
+      roleNote.textContent = 'Manager dashboard is restricted. Continue with your role-specific module.';
+    });
+  </script>
+</body>
+</html>

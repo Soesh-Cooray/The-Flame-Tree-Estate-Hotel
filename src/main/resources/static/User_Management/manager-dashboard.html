@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Flame Tree Estate Hotel | Manager Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="manager-dashboard.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div>
+        <p class="eyebrow">Manager Console</p>
+        <h1>The Flame Tree Estate Hotel</h1>
+        <p class="subtext">Internal Small Scale Hotel Operations and Inventory Management System</p>
+      </div>
+      <a class="back-link" href="index.html">Back to Login</a>
+    </header>
+
+    <main class="grid">
+      <section class="panel">
+        <h2>Create User Accounts</h2>
+        <form class="form" action="#" method="post">
+          <label for="newUsername">Username</label>
+          <input id="newUsername" type="text" placeholder="first.last" required />
+
+          <label for="newEmail">Staff Email</label>
+          <input id="newEmail" type="email" placeholder="name@flametreehotel.local" required />
+
+          <label for="tempPassword">Temporary Password</label>
+          <input id="tempPassword" type="password" placeholder="••••••••" required />
+
+          <button type="submit">Create Account</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Assign Roles &amp; Permissions</h2>
+        <form class="form" action="#" method="post">
+          <label for="staffUser">Select User</label>
+          <input id="staffUser" type="text" placeholder="Search by username" required />
+
+          <label for="role">Role</label>
+          <select id="role" required>
+            <option value="">Choose role</option>
+            <option>Manager</option>
+            <option>Housekeeping Staff</option>
+            <option>Inventory / Store Manager</option>
+            <option>Maintenance Staff</option>
+            <option>Staff Supervisor</option>
+            <option>Front Desk / Reception Staff</option>
+            <option>Supplier &amp; Purchase Management</option>
+          </select>
+
+          <label class="check"><input type="checkbox" /> Can approve inventory purchases</label>
+          <label class="check"><input type="checkbox" /> Can view cross-department reports</label>
+          <label class="check"><input type="checkbox" /> Can manage shift assignments</label>
+
+          <button type="submit">Save Permissions</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Deactivate User Accounts</h2>
+        <form class="form" action="#" method="post">
+          <label for="deactivateUser">User Account</label>
+          <input id="deactivateUser" type="text" placeholder="username to deactivate" required />
+
+          <label for="reason">Reason</label>
+          <textarea id="reason" rows="3" placeholder="Reason for deactivation" required></textarea>
+
+          <button type="submit" class="danger">Deactivate Account</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Secure &amp; Role Based Access Control</h2>
+        <ul class="security-list">
+          <li>Two-step verification required for manager-level actions.</li>
+          <li>Role boundaries enforced for all staff modules.</li>
+          <li>All account and permission updates are audit-logged.</li>
+          <li>Inactive accounts blocked from internal systems immediately.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
