@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Flame Tree Estate Hotel | Supplier & Purchase Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="Supplier.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">E03: Supplier and Purchase Management</p>
+        <h1>The Flame Tree Estate Hotel</h1>
+        <p class="subtitle">Manage suppliers and purchase workflows to ensure timely restocking of hotel supplies.</p>
+      </div>
+      <a class="back-link" href="../User_Management/index.html">Back to Login</a>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Add / Manage Suppliers</h2>
+        <form class="form" action="#" method="post">
+          <label for="supplierName">Supplier Name</label>
+          <input id="supplierName" type="text" placeholder="Supplier company name" required />
+
+          <label for="supplierType">Supply Category</label>
+          <select id="supplierType" required>
+            <option value="">Select category</option>
+            <option>Linen & Bedding</option>
+            <option>Toiletries</option>
+            <option>Cleaning Supplies</option>
+            <option>Food & Beverage</option>
+            <option>Maintenance Materials</option>
+          </select>
+
+          <label for="contactPerson">Contact Person</label>
+          <input id="contactPerson" type="text" placeholder="Name of account manager" required />
+
+          <label for="supplierPhone">Phone</label>
+          <input id="supplierPhone" type="tel" placeholder="e.g., +94 77 000 0000" required />
+
+          <label for="supplierEmail">Email</label>
+          <input id="supplierEmail" type="email" placeholder="contact@supplier.com" required />
+
+          <button type="submit">Save Supplier</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Create Purchase Orders</h2>
+        <form class="form" action="#" method="post">
+          <label for="poSupplier">Supplier</label>
+          <input id="poSupplier" type="text" placeholder="Choose supplier name" required />
+
+          <label for="poItem">Item</label>
+          <input id="poItem" type="text" placeholder="e.g., Bath Towels" required />
+
+          <label for="poQuantity">Quantity</label>
+          <input id="poQuantity" type="number" min="1" placeholder="0" required />
+
+          <label for="poDate">Expected Delivery Date</label>
+          <input id="poDate" type="date" required />
+
+          <label for="poNotes">Purchase Notes</label>
+          <textarea id="poNotes" rows="3" placeholder="Special terms, pricing, or delivery notes"></textarea>
+
+          <button type="submit">Create Purchase Order</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Record Delivered Items</h2>
+        <form class="form" action="#" method="post">
+          <label for="deliveryPo">Purchase Order ID</label>
+          <input id="deliveryPo" type="text" placeholder="e.g., PO-2026-048" required />
+
+          <label for="deliveryItem">Delivered Item</label>
+          <input id="deliveryItem" type="text" placeholder="Item name" required />
+
+          <label for="deliveredQty">Delivered Quantity</label>
+          <input id="deliveredQty" type="number" min="1" placeholder="0" required />
+
+          <label for="deliveryStatus">Delivery Status</label>
+          <select id="deliveryStatus" required>
+            <option value="">Select status</option>
+            <option>Complete</option>
+            <option>Partial Delivery</option>
+            <option>Damaged on Arrival</option>
+          </select>
+
+          <button type="submit">Record Delivery</button>
+        </form>
+      </section>
+
+      <section class="panel full-width">
+        <h2>Supplier & Purchase Overview</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>PO ID</th>
+                <th>Supplier</th>
+                <th>Item</th>
+                <th>Ordered Qty</th>
+                <th>Delivered Qty</th>
+                <th>Status</th>
+                <th>Restock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PO-2026-048</td>
+                <td>Island Linen Co.</td>
+                <td>Bath Towels</td>
+                <td>120</td>
+                <td>120</td>
+                <td><span class="tag done">Complete</span></td>
+                <td>Stock Updated</td>
+              </tr>
+              <tr>
+                <td>PO-2026-049</td>
+                <td>PureCare Supplies</td>
+                <td>Toiletry Kits</td>
+                <td>300</td>
+                <td>180</td>
+                <td><span class="tag partial">Partial</span></td>
+                <td>Pending Balance</td>
+              </tr>
+              <tr>
+                <td>PO-2026-050</td>
+                <td>CleanPro Lanka</td>
+                <td>Floor Cleaner</td>
+                <td>80</td>
+                <td>0</td>
+                <td><span class="tag pending">Awaiting Delivery</span></td>
+                <td>Due Tomorrow</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
