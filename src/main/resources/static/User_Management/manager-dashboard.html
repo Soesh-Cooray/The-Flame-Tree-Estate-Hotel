@@ -10,80 +10,216 @@
   <link rel="stylesheet" href="manager-dashboard.css" />
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand-block">
         <p class="eyebrow">Manager Console</p>
         <h1>The Flame Tree Estate Hotel</h1>
-        <p class="subtext">Internal Small Scale Hotel Operations and Inventory Management System</p>
+        <p class="subtext">Oversee all staff functions and hotel operations from one place.</p>
       </div>
+
+      <nav class="side-nav" aria-label="Manager navigation">
+        <a href="#overview">Overview</a>
+        <a href="#access-control">User Access Control</a>
+        <a href="#guest-services">Guest Services</a>
+        <a href="#housekeeping">Housekeeping</a>
+        <a href="#inventory">Inventory</a>
+        <a href="#maintenance">Maintenance</a>
+        <a href="#suppliers">Suppliers &amp; Purchase</a>
+      </nav>
+
       <a class="back-link" href="index.html">Back to Login</a>
-    </header>
+    </aside>
 
-    <main class="grid">
-      <section class="panel">
-        <h2>Create User Accounts</h2>
-        <form class="form" action="#" method="post">
-          <label for="newUsername">Username</label>
-          <input id="newUsername" type="text" placeholder="first.last" required />
-
-          <label for="newEmail">Staff Email</label>
-          <input id="newEmail" type="email" placeholder="name@flametreehotel.local" required />
-
-          <label for="tempPassword">Temporary Password</label>
-          <input id="tempPassword" type="password" placeholder="••••••••" required />
-
-          <button type="submit">Create Account</button>
-        </form>
+    <main class="content">
+      <section class="panel" id="overview">
+        <h2>Hotel Operations Overview</h2>
+        <div class="kpi-grid">
+          <article class="kpi"><h3>Open Guest Requests</h3><p>14</p></article>
+          <article class="kpi"><h3>Rooms Pending Housekeeping</h3><p>09</p></article>
+          <article class="kpi"><h3>Low Inventory Items</h3><p>06</p></article>
+          <article class="kpi"><h3>Open Maintenance Tickets</h3><p>07</p></article>
+        </div>
       </section>
 
-      <section class="panel">
-        <h2>Assign Roles &amp; Permissions</h2>
-        <form class="form" action="#" method="post">
-          <label for="staffUser">Select User</label>
-          <input id="staffUser" type="text" placeholder="Search by username" required />
+      <section class="panel" id="access-control">
+        <h2>User Access Control (Manager Core)</h2>
+        <div class="two-col">
+          <form class="form" action="#" method="post">
+            <h3>Create User Account</h3>
+            <label for="newUsername">Username</label>
+            <input id="newUsername" type="text" placeholder="first.last" required />
+            <label for="newEmail">Staff Email</label>
+            <input id="newEmail" type="email" placeholder="name@flametreehotel.local" required />
+            <label for="tempPassword">Temporary Password</label>
+            <input id="tempPassword" type="password" placeholder="••••••••" required />
+            <button type="submit">Create Account</button>
+          </form>
 
-          <label for="role">Role</label>
-          <select id="role" required>
-            <option value="">Choose role</option>
-            <option>Manager</option>
-            <option>Housekeeping Staff</option>
-            <option>Inventory / Store Manager</option>
-            <option>Maintenance Staff</option>
-            <option>Staff Supervisor</option>
-            <option>Front Desk / Reception Staff</option>
-            <option>Supplier &amp; Purchase Management</option>
-          </select>
+          <form class="form" action="#" method="post">
+            <h3>Assign Role &amp; Permissions</h3>
+            <label for="staffUser">Select User</label>
+            <input id="staffUser" type="text" placeholder="Search by username" required />
+            <label for="role">Role</label>
+            <select id="role" required>
+              <option value="">Choose role</option>
+              <option>Manager</option>
+              <option>Housekeeping Staff</option>
+              <option>Inventory / Store Manager</option>
+              <option>Maintenance Staff</option>
+              <option>Staff Supervisor</option>
+              <option>Front Desk / Reception Staff</option>
+              <option>Supplier &amp; Purchase Management</option>
+            </select>
+            <label class="check"><input type="checkbox" /> Can approve inventory purchases</label>
+            <label class="check"><input type="checkbox" /> Can view cross-department reports</label>
+            <label class="check"><input type="checkbox" /> Can manage shift assignments</label>
+            <button type="submit">Save Permissions</button>
+          </form>
+        </div>
 
-          <label class="check"><input type="checkbox" /> Can approve inventory purchases</label>
-          <label class="check"><input type="checkbox" /> Can view cross-department reports</label>
-          <label class="check"><input type="checkbox" /> Can manage shift assignments</label>
-
-          <button type="submit">Save Permissions</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <h2>Deactivate User Accounts</h2>
-        <form class="form" action="#" method="post">
+        <form class="form form-inline" action="#" method="post">
+          <h3>Deactivate User Account</h3>
           <label for="deactivateUser">User Account</label>
           <input id="deactivateUser" type="text" placeholder="username to deactivate" required />
-
           <label for="reason">Reason</label>
-          <textarea id="reason" rows="3" placeholder="Reason for deactivation" required></textarea>
-
+          <textarea id="reason" rows="2" placeholder="Reason for deactivation" required></textarea>
           <button type="submit" class="danger">Deactivate Account</button>
         </form>
       </section>
 
-      <section class="panel">
-        <h2>Secure &amp; Role Based Access Control</h2>
-        <ul class="security-list">
-          <li>Two-step verification required for manager-level actions.</li>
-          <li>Role boundaries enforced for all staff modules.</li>
-          <li>All account and permission updates are audit-logged.</li>
-          <li>Inactive accounts blocked from internal systems immediately.</li>
-        </ul>
+      <section class="panel" id="guest-services">
+        <h2>Front Desk &amp; Guest Service Functions</h2>
+        <div class="two-col">
+          <form class="form" action="#" method="post">
+            <h3>Record Guest Service Request</h3>
+            <label for="gsRoom">Room</label>
+            <input id="gsRoom" type="text" placeholder="e.g., 204" required />
+            <label for="gsType">Request Type</label>
+            <select id="gsType" required>
+              <option value="">Select type</option>
+              <option>Room Assistance</option>
+              <option>Extra Towels</option>
+              <option>Toiletries Refill</option>
+            </select>
+            <button type="submit">Save Request</button>
+          </form>
+          <div class="mini-table">
+            <h3>Assigned Guest Requests</h3>
+            <ul>
+              <li>GS-2026-021 · Room 204 · In Progress</li>
+              <li>GS-2026-022 · Room 116 · Assigned</li>
+              <li>GS-2026-019 · Room 308 · Completed</li>
+            </ul>
+            <a class="module-link" href="../Guest_Services_Request_Management/Guest Service.html">Open Guest Services Module</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="housekeeping">
+        <h2>Housekeeping Functions</h2>
+        <div class="two-col">
+          <form class="form" action="#" method="post">
+            <h3>Assign Housekeeping Task</h3>
+            <label for="hkRoom">Room Number</label>
+            <input id="hkRoom" type="text" placeholder="e.g., 305" required />
+            <label for="hkStaff">Assign Staff</label>
+            <input id="hkStaff" type="text" placeholder="Housekeeping staff name" required />
+            <label for="hkStatus">Room Status</label>
+            <select id="hkStatus" required>
+              <option value="">Select status</option>
+              <option>Occupied Dirty</option>
+              <option>Occupied Clean</option>
+              <option>Vacant Clean</option>
+            </select>
+            <button type="submit">Assign</button>
+          </form>
+          <form class="form" action="#" method="post">
+            <h3>Record Linen &amp; Consumable Usage</h3>
+            <label for="linenUsed">Linen Used (pcs)</label>
+            <input id="linenUsed" type="number" min="0" placeholder="0" required />
+            <label for="consumableUsed">Toiletries Used (units)</label>
+            <input id="consumableUsed" type="number" min="0" placeholder="0" required />
+            <button type="submit">Record Usage</button>
+            <a class="module-link" href="../Room_&_Housekeeping_Management/housekeeping.html">Open Housekeeping Module</a>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" id="inventory">
+        <h2>Inventory / Store Functions</h2>
+        <div class="two-col">
+          <form class="form" action="#" method="post">
+            <h3>Add New Inventory Item</h3>
+            <label for="invItem">Item Name</label>
+            <input id="invItem" type="text" placeholder="e.g., Bath Towel" required />
+            <label for="invQty">Opening Quantity</label>
+            <input id="invQty" type="number" min="0" placeholder="0" required />
+            <button type="submit">Add Item</button>
+          </form>
+          <form class="form" action="#" method="post">
+            <h3>Update Quantity / Stock Status</h3>
+            <label for="invUpdateType">Update Type</label>
+            <select id="invUpdateType" required>
+              <option value="">Select type</option>
+              <option>Stock In</option>
+              <option>Stock Out</option>
+              <option>Damage Reported</option>
+              <option>Missing Reported</option>
+            </select>
+            <label for="invChange">Quantity</label>
+            <input id="invChange" type="number" min="1" placeholder="0" required />
+            <button type="submit">Update Inventory</button>
+            <a class="module-link" href="../Inventory_Management/Inventory.html">Open Inventory Module</a>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" id="maintenance">
+        <h2>Maintenance Functions</h2>
+        <div class="two-col">
+          <form class="form" action="#" method="post">
+            <h3>Report Damaged Asset</h3>
+            <label for="mtAsset">Asset / Item</label>
+            <input id="mtAsset" type="text" placeholder="e.g., AC Unit" required />
+            <label for="mtLocation">Location</label>
+            <input id="mtLocation" type="text" placeholder="e.g., Room 104" required />
+            <button type="submit">Create Ticket</button>
+          </form>
+          <div class="mini-table">
+            <h3>Repair / Replacement Status</h3>
+            <ul>
+              <li>Open Issues: 12</li>
+              <li>In Progress: 7</li>
+              <li>Repaired: 18</li>
+              <li>Replacement Needed: 3</li>
+            </ul>
+            <a class="module-link" href="../Maintenance_and_Damaged_Item_Tracking/Maintenance.html">Open Maintenance Module</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="suppliers">
+        <h2>Supplier &amp; Purchase Functions</h2>
+        <div class="two-col">
+          <form class="form" action="#" method="post">
+            <h3>Add / Manage Supplier</h3>
+            <label for="spName">Supplier Name</label>
+            <input id="spName" type="text" placeholder="Supplier company" required />
+            <label for="spContact">Contact Person</label>
+            <input id="spContact" type="text" placeholder="Contact name" required />
+            <button type="submit">Save Supplier</button>
+          </form>
+          <form class="form" action="#" method="post">
+            <h3>Create PO &amp; Record Delivery</h3>
+            <label for="spItem">Item</label>
+            <input id="spItem" type="text" placeholder="e.g., Toiletry Kits" required />
+            <label for="spOrdered">Ordered Qty</label>
+            <input id="spOrdered" type="number" min="1" placeholder="0" required />
+            <button type="submit">Save Purchase Record</button>
+            <a class="module-link" href="../Supplier_&_Purchase_Management/Supplier.html">Open Supplier Module</a>
+          </form>
+        </div>
       </section>
     </main>
   </div>
