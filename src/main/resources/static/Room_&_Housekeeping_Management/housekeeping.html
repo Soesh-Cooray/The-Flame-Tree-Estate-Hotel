@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Flame Tree Estate Hotel | Room & Housekeeping Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="housekeeping.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Room & Housekeeping Management</p>
+        <h1>The Flame Tree Estate Hotel</h1>
+        <p class="subtitle">Manage room status, assign housekeeping work, and track cleanliness plus linen/consumable usage.</p>
+      </div>
+      <a class="back-link" href="../User_Management/index.html">Back to Login</a>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Record Guest Service Requests</h2>
+        <form class="form" action="#" method="post">
+          <label for="guestName">Guest Name</label>
+          <input id="guestName" type="text" placeholder="Guest full name" required />
+
+          <label for="roomNo">Room Number</label>
+          <input id="roomNo" type="text" placeholder="e.g., 305" required />
+
+          <label for="requestType">Request Type</label>
+          <select id="requestType" required>
+            <option value="">Select request type</option>
+            <option>Room Cleaning</option>
+            <option>Extra Linen</option>
+            <option>Toiletries Refill</option>
+            <option>Turn-down Service</option>
+            <option>Other Assistance</option>
+          </select>
+
+          <label for="details">Request Details</label>
+          <textarea id="details" rows="4" placeholder="Add useful details for staff" required></textarea>
+
+          <button type="submit">Record Request</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Assign Requests to Staff</h2>
+        <form class="form" action="#" method="post">
+          <label for="requestId">Request ID</label>
+          <input id="requestId" type="text" placeholder="e.g., HK-2026-031" required />
+
+          <label for="staffName">Assign To</label>
+          <input id="staffName" type="text" placeholder="Housekeeping staff name" required />
+
+          <label for="roomStatus">Room Status</label>
+          <select id="roomStatus" required>
+            <option value="">Select room status</option>
+            <option>Vacant Clean</option>
+            <option>Occupied Clean</option>
+            <option>Occupied Dirty</option>
+            <option>Out of Service</option>
+          </select>
+
+          <label for="dueTime">Due Time</label>
+          <input id="dueTime" type="datetime-local" required />
+
+          <button type="submit">Assign Task</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Linen & Consumable Usage</h2>
+        <form class="form" action="#" method="post">
+          <label for="usageRoom">Room Number</label>
+          <input id="usageRoom" type="text" placeholder="e.g., 305" required />
+
+          <label for="linenUsed">Linen Used (pcs)</label>
+          <input id="linenUsed" type="number" min="0" placeholder="0" required />
+
+          <label for="toiletriesUsed">Toiletries Used (units)</label>
+          <input id="toiletriesUsed" type="number" min="0" placeholder="0" required />
+
+          <label for="usageNotes">Notes</label>
+          <textarea id="usageNotes" rows="3" placeholder="Any special usage notes"></textarea>
+
+          <button type="submit">Record Usage</button>
+        </form>
+      </section>
+
+      <section class="panel full-width">
+        <h2>View Assigned Requests</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Room</th>
+                <th>Request</th>
+                <th>Assigned Staff</th>
+                <th>Cleanliness Status</th>
+                <th>Task Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>HK-2026-031</td>
+                <td>305</td>
+                <td>Room Cleaning</td>
+                <td>A. Silva</td>
+                <td><span class="tag clean">In Progress</span></td>
+                <td><span class="tag assigned">Assigned</span></td>
+              </tr>
+              <tr>
+                <td>HK-2026-028</td>
+                <td>112</td>
+                <td>Extra Linen</td>
+                <td>N. Perera</td>
+                <td><span class="tag done">Clean</span></td>
+                <td><span class="tag completed">Completed</span></td>
+              </tr>
+              <tr>
+                <td>HK-2026-030</td>
+                <td>219</td>
+                <td>Toiletries Refill</td>
+                <td>R. Khan</td>
+                <td><span class="tag clean">Pending</span></td>
+                <td><span class="tag assigned">Assigned</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
