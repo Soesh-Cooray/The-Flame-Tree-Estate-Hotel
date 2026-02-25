@@ -21,76 +21,27 @@
     </header>
 
     <main class="layout">
-      <section class="panel">
-        <h2>Report Damaged Asset</h2>
-        <form class="form" action="#" method="post">
-          <label for="assetName">Asset / Item Name</label>
-          <input id="assetName" type="text" placeholder="e.g., AC Unit, Bedside Lamp" required />
-
-          <label for="location">Room / Location</label>
-          <input id="location" type="text" placeholder="e.g., Room 104, Lobby" required />
-
-          <label for="severity">Damage Severity</label>
-          <select id="severity" required>
-            <option value="">Select severity</option>
-            <option>Low</option>
-            <option>Medium</option>
-            <option>High</option>
-            <option>Critical</option>
-          </select>
-
-          <label for="issueDescription">Issue Description</label>
-          <textarea id="issueDescription" rows="4" placeholder="Describe the damage and current condition" required></textarea>
-
-          <button type="submit">Create Maintenance Ticket</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <h2>Assign Maintenance Task</h2>
-        <form class="form" action="#" method="post">
-          <label for="ticketId">Ticket ID</label>
-          <input id="ticketId" type="text" placeholder="e.g., MT-2026-014" required />
-
-          <label for="assignedTo">Assign To</label>
-          <input id="assignedTo" type="text" placeholder="Technician name" required />
-
-          <label for="dueDate">Due Date</label>
-          <input id="dueDate" type="date" required />
-
-          <label for="priority">Priority</label>
-          <select id="priority" required>
-            <option value="">Select priority</option>
-            <option>Normal</option>
-            <option>Urgent</option>
-            <option>Emergency</option>
-          </select>
-
-          <button type="submit">Assign Task</button>
-        </form>
-      </section>
-
-      <section class="panel">
+      <section class="panel full-width">
         <h2>Repair / Replacement Status</h2>
         <div class="status-grid">
           <article class="status-card">
             <h3>Open Issues</h3>
-            <p class="metric">12</p>
+            <p class="metric" id="openIssuesMetric">0</p>
             <p>Newly reported damaged assets awaiting action.</p>
           </article>
           <article class="status-card">
             <h3>In Progress</h3>
-            <p class="metric">7</p>
+            <p class="metric" id="inProgressMetric">0</p>
             <p>Tasks currently assigned and under maintenance.</p>
           </article>
           <article class="status-card">
             <h3>Repaired</h3>
-            <p class="metric">18</p>
+            <p class="metric" id="repairedMetric">0</p>
             <p>Resolved issues completed by maintenance team.</p>
           </article>
           <article class="status-card">
             <h3>Replacement Needed</h3>
-            <p class="metric">3</p>
+            <p class="metric" id="replacementMetric">0</p>
             <p>Items marked for purchase and replacement workflow.</p>
           </article>
         </div>
@@ -98,6 +49,9 @@
 
       <section class="panel full-width">
         <h2>Maintenance Activity Log</h2>
+        <div class="table-actions">
+          <button type="button" id="openAddDialogBtn">Add Maintenance Ticket</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -107,39 +61,82 @@
                 <th>Issue</th>
                 <th>Assigned To</th>
                 <th>Status</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>MT-2026-011</td>
-                <td>Room 202</td>
-                <td>Leaking faucet</td>
-                <td>R. Silva</td>
-                <td><span class="tag in-progress">In Progress</span></td>
-                <td><button class="small-btn" type="button">Update</button></td>
-              </tr>
-              <tr>
-                <td>MT-2026-012</td>
-                <td>Room 118</td>
-                <td>Damaged reading lamp</td>
-                <td>M. Khan</td>
-                <td><span class="tag replacement">Replacement</span></td>
-                <td><button class="small-btn" type="button">Update</button></td>
-              </tr>
-              <tr>
-                <td>MT-2026-013</td>
-                <td>Lobby</td>
-                <td>AC not cooling</td>
-                <td>T. Perera</td>
-                <td><span class="tag open">Open</span></td>
-                <td><button class="small-btn" type="button">Update</button></td>
-              </tr>
-            </tbody>
+            <tbody id="maintenanceTableBody"></tbody>
           </table>
         </div>
+        <p id="maintenanceMessage" aria-live="polite"></p>
       </section>
     </main>
   </div>
+
+  <dialog id="addTicketDialog" class="maintenance-dialog">
+    <form class="form" id="addTicketForm" method="dialog">
+      <h3>Add Maintenance Ticket</h3>
+
+      <label for="ticketId">Ticket ID</label>
+      <input id="ticketId" type="text" placeholder="e.g., MT-2026-014" required />
+
+      <label for="location">Room / Location</label>
+      <input id="location" type="text" placeholder="e.g., Room 104, Lobby" required />
+
+      <label for="issue">Issue</label>
+      <input id="issue" type="text" placeholder="e.g., AC not cooling" required />
+
+      <label for="assignedTo">Assign To</label>
+      <input id="assignedTo" type="text" placeholder="Technician name" required />
+
+      <label for="status">Status</label>
+      <select id="status" required>
+        <option value="">Select status</option>
+        <option>Open</option>
+        <option>In Progress</option>
+        <option>Repaired</option>
+        <option>Replacement Needed</option>
+      </select>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="cancelAddDialogBtn">Cancel</button>
+        <button type="submit">Add Ticket</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="updateTicketDialog" class="maintenance-dialog">
+    <form class="form" id="updateTicketForm" method="dialog">
+      <h3>Update Maintenance Ticket</h3>
+
+      <input id="updateTicketIndex" type="hidden" />
+
+      <label for="updateTicketId">Ticket ID</label>
+      <input id="updateTicketId" type="text" required />
+
+      <label for="updateLocation">Room / Location</label>
+      <input id="updateLocation" type="text" required />
+
+      <label for="updateIssue">Issue</label>
+      <input id="updateIssue" type="text" required />
+
+      <label for="updateAssignedTo">Assign To</label>
+      <input id="updateAssignedTo" type="text" required />
+
+      <label for="updateStatus">Status</label>
+      <select id="updateStatus" required>
+        <option>Open</option>
+        <option>In Progress</option>
+        <option>Repaired</option>
+        <option>Replacement Needed</option>
+      </select>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="cancelUpdateDialogBtn">Cancel</button>
+        <button type="submit">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="Maintenance.js"></script>
 </body>
 </html>
