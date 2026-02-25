@@ -179,8 +179,156 @@ th {
   color: #ffb48f;
 }
 
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 0 0 20px 0;
+}
+
+.summary-card {
+  background: rgba(43, 34, 51, 0.7);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.summary-card h3 {
+  margin: 0 0 8px 0;
+  color: var(--tone-gold);
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.summary-card .metric {
+  margin: 0;
+  font-size: 2.4rem;
+  font-weight: 800;
+  background: linear-gradient(120deg, #e472b8, #c892ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.summary-card > p:last-child {
+  margin: 8px 0 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.table-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.table-actions button {
+  padding: 10px 16px;
+  font-size: 0.92rem;
+}
+
+.po-dialog {
+  width: min(500px, calc(100% - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  border: 1px solid rgba(228, 114, 184, 0.4);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(43, 34, 51, 0.98), rgba(30, 20, 40, 0.98));
+  color: var(--tone-cream);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
+  padding: 0;
+}
+
+.po-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.po-dialog .form {
+  padding: 24px;
+}
+
+.po-dialog h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: var(--tone-cream);
+  font-size: 1.1rem;
+}
+
+.po-dialog input,
+.po-dialog select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(228, 114, 184, 0.3);
+}
+
+.po-dialog input:focus,
+.po-dialog select:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(228, 114, 184, 0.6);
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dialog-actions button {
+  flex: 1;
+}
+
+.secondary-btn {
+  background: rgba(200, 146, 255, 0.2) !important;
+  color: var(--tone-gold) !important;
+  border: 1px solid rgba(200, 146, 255, 0.4);
+}
+
+.secondary-btn:hover {
+  background: rgba(200, 146, 255, 0.3) !important;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.action-buttons button {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  flex: 1;
+}
+
+.edit-btn {
+  background: rgba(200, 146, 255, 0.25);
+  color: var(--tone-gold);
+}
+
+.delete-btn {
+  background: rgba(255, 95, 95, 0.25);
+  color: #ff5f5f;
+}
+
+#poMessage {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(228, 114, 184, 0.1);
+  color: var(--tone-cream);
+  display: none;
+}
+
+#poMessage.show {
+  display: block;
+}
+
 @media (max-width: 720px) {
   .topbar {
     flex-direction: column;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
