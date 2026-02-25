@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Flame Tree Estate Hotel | Supervisor Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="supervisor-dashboard.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <p class="eyebrow">Supervisor Console</p>
+        <h1>The Flame Tree Estate Hotel</h1>
+        <p class="subtext">Monitor all hotel operations and module activities.</p>
+      </div>
+
+      <nav class="side-nav" aria-label="Supervisor navigation">
+        <a href="#overview">Overview</a>
+        <a href="#guest-services">Guest Services</a>
+        <a href="#housekeeping">Housekeeping</a>
+        <a href="#inventory">Inventory</a>
+        <a href="#maintenance">Maintenance</a>
+        <a href="#suppliers">Suppliers &amp; Purchase</a>
+      </nav>
+
+      <a class="back-link" href="index.html">Back to Login</a>
+    </aside>
+
+    <main class="content">
+      <section class="panel" id="overview">
+        <h2>Hotel Operations Overview</h2>
+        <div class="kpi-grid">
+          <article class="kpi"><h3>Open Guest Requests</h3><p>14</p></article>
+          <article class="kpi"><h3>Rooms Pending Housekeeping</h3><p>09</p></article>
+          <article class="kpi"><h3>Low Inventory Items</h3><p>06</p></article>
+          <article class="kpi"><h3>Open Maintenance Tickets</h3><p>07</p></article>
+        </div>
+      </section>
+
+      <section class="panel" id="guest-services">
+        <h2>Guest Service Activities</h2>
+        <div class="summary-section">
+          <div class="summary-stats">
+            <h3>Request Summary</h3>
+            <ul>
+              <li>In Progress: 4</li>
+              <li>Assigned: 5</li>
+              <li>Completed: 5</li>
+            </ul>
+          </div>
+          <div class="summary-section-action">
+            <a class="module-link" href="../Guest_Services_Request_Management/Guest Service.html">Open Guest Services Module</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="housekeeping">
+        <h2>Housekeeping Activities</h2>
+        <div class="summary-section">
+          <div class="summary-stats">
+            <h3>Task Summary</h3>
+            <ul>
+              <li>In Progress: 6</li>
+              <li>Assigned: 8</li>
+              <li>Completed: 12</li>
+            </ul>
+          </div>
+          <div class="summary-section-action">
+            <a class="module-link" href="../Room_&_Housekeeping_Management/housekeeping.html">Open Housekeeping Module</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="inventory">
+        <h2>Inventory Activities</h2>
+        <div class="summary-section">
+          <div class="summary-stats">
+            <h3>Stock Status</h3>
+            <ul>
+              <li>Healthy Stock: 28 items</li>
+              <li>Low Stock: 6 items</li>
+              <li>Damaged: 2 items</li>
+              <li>Missing: 1 item</li>
+            </ul>
+          </div>
+          <div class="summary-section-action">
+            <a class="module-link" href="../Inventory_Management/Inventory.html">Open Inventory Module</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="maintenance">
+        <h2>Maintenance Activities</h2>
+        <div class="summary-section">
+          <div class="summary-stats">
+            <h3>Ticket Status</h3>
+            <ul>
+              <li>Open Issues: 12</li>
+              <li>In Progress: 7</li>
+              <li>Repaired: 18</li>
+              <li>Replacement Needed: 3</li>
+            </ul>
+          </div>
+          <div class="summary-section-action">
+            <a class="module-link" href="../Maintenance_and_Damaged_Item_Tracking/Maintenance.html">Open Maintenance Module</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="suppliers">
+        <h2>Supplier & Purchase Activities</h2>
+        <div class="summary-section">
+          <div class="summary-stats">
+            <h3>Purchase Order Summary</h3>
+            <ul>
+              <li>Pending Delivery: 8</li>
+              <li>Partial Deliveries: 3</li>
+              <li>Complete: 15</li>
+            </ul>
+          </div>
+          <div class="summary-section-action">
+            <a class="module-link" href="../Supplier_&_Purchase_Management/Supplier.html">Open Supplier Module</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
