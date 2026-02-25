@@ -21,78 +21,27 @@
     </header>
 
     <main class="layout">
-      <section class="panel">
-        <h2>Add New Inventory Items</h2>
-        <form class="form" action="#" method="post">
-          <label for="itemName">Item Name</label>
-          <input id="itemName" type="text" placeholder="e.g., Bath Towel" required />
-
-          <label for="category">Category</label>
-          <select id="category" required>
-            <option value="">Select category</option>
-            <option>Bedding</option>
-            <option>Towels</option>
-            <option>Toiletries</option>
-            <option>Cleaning Supplies</option>
-            <option>Other Consumables</option>
-          </select>
-
-          <label for="unit">Unit</label>
-          <input id="unit" type="text" placeholder="e.g., Pieces, Packs, Bottles" required />
-
-          <label for="openingQty">Opening Quantity</label>
-          <input id="openingQty" type="number" min="0" placeholder="0" required />
-
-          <button type="submit">Add Item</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <h2>Update Inventory Quantities</h2>
-        <form class="form" action="#" method="post">
-          <label for="updateItem">Select Item</label>
-          <input id="updateItem" type="text" placeholder="Search by item name" required />
-
-          <label for="updateType">Update Type</label>
-          <select id="updateType" required>
-            <option value="">Choose update type</option>
-            <option>Stock In</option>
-            <option>Stock Out</option>
-            <option>Damage Reported</option>
-            <option>Missing Item Reported</option>
-          </select>
-
-          <label for="changeQty">Quantity Change</label>
-          <input id="changeQty" type="number" min="1" placeholder="Enter quantity" required />
-
-          <label for="remarks">Remarks</label>
-          <textarea id="remarks" rows="3" placeholder="Reason or notes"></textarea>
-
-          <button type="submit">Update Quantity</button>
-        </form>
-      </section>
-
-      <section class="panel">
+      <section class="panel full-width">
         <h2>View Inventory Levels</h2>
         <div class="stats-grid">
           <article class="stat-card">
             <h3>Total Items</h3>
-            <p class="metric">145</p>
+            <p class="metric" id="totalItemsMetric">0</p>
             <p>Active consumable items tracked in the system.</p>
           </article>
           <article class="stat-card">
             <h3>Low Stock</h3>
-            <p class="metric warning">09</p>
+            <p class="metric warning" id="lowStockMetric">0</p>
             <p>Items close to minimum reorder level.</p>
           </article>
           <article class="stat-card">
             <h3>Damaged</h3>
-            <p class="metric danger">04</p>
+            <p class="metric danger" id="damagedMetric">0</p>
             <p>Items recorded as damaged and unavailable.</p>
           </article>
           <article class="stat-card">
             <h3>Missing</h3>
-            <p class="metric danger">02</p>
+            <p class="metric danger" id="missingMetric">0</p>
             <p>Items marked missing during audits.</p>
           </article>
         </div>
@@ -100,6 +49,9 @@
 
       <section class="panel full-width">
         <h2>Inventory Stock Levels</h2>
+        <div class="table-actions">
+          <button type="button" id="openAddDialogBtn">Add Inventory Item</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -111,50 +63,91 @@
                 <th>Damaged</th>
                 <th>Missing</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>Bath Towels</td>
-                <td>Towels</td>
-                <td>128</td>
-                <td>70</td>
-                <td>2</td>
-                <td>1</td>
-                <td><span class="tag ok">Healthy</span></td>
-              </tr>
-              <tr>
-                <td>Toilet Tissue Packs</td>
-                <td>Toiletries</td>
-                <td>45</td>
-                <td>50</td>
-                <td>1</td>
-                <td>0</td>
-                <td><span class="tag low">Low Stock</span></td>
-              </tr>
-              <tr>
-                <td>Bed Sheets - King</td>
-                <td>Bedding</td>
-                <td>66</td>
-                <td>60</td>
-                <td>1</td>
-                <td>1</td>
-                <td><span class="tag watch">Monitor</span></td>
-              </tr>
-              <tr>
-                <td>Glass Cleaner</td>
-                <td>Cleaning Supplies</td>
-                <td>22</td>
-                <td>20</td>
-                <td>0</td>
-                <td>0</td>
-                <td><span class="tag ok">Healthy</span></td>
-              </tr>
-            </tbody>
+            <tbody id="inventoryTableBody"></tbody>
           </table>
         </div>
+        <p id="inventoryMessage" aria-live="polite"></p>
       </section>
     </main>
   </div>
+
+  <dialog id="addItemDialog" class="inventory-dialog">
+    <form class="form" id="addItemForm" method="dialog">
+      <h3>Add New Inventory Item</h3>
+
+      <label for="itemName">Item Name</label>
+      <input id="itemName" type="text" placeholder="e.g., Bath Towel" required />
+
+      <label for="category">Category</label>
+      <select id="category" required>
+        <option value="">Select category</option>
+        <option>Bedding</option>
+        <option>Towels</option>
+        <option>Toiletries</option>
+        <option>Cleaning Supplies</option>
+        <option>Other Consumables</option>
+      </select>
+
+      <label for="unit">Unit</label>
+      <input id="unit" type="text" placeholder="e.g., Pieces, Packs, Bottles" required />
+
+      <label for="openingQty">Opening Quantity</label>
+      <input id="openingQty" type="number" min="0" placeholder="0" required />
+
+      <label for="minLevel">Minimum Level</label>
+      <input id="minLevel" type="number" min="0" placeholder="0" required />
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="cancelAddDialogBtn">Cancel</button>
+        <button type="submit">Add Item</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="updateItemDialog" class="inventory-dialog">
+    <form class="form" id="updateItemForm" method="dialog">
+      <h3>Update Inventory Item</h3>
+
+      <input id="updateItemIndex" type="hidden" />
+
+      <label for="updateItemName">Item Name</label>
+      <input id="updateItemName" type="text" required />
+
+      <label for="updateCategory">Category</label>
+      <select id="updateCategory" required>
+        <option value="">Select category</option>
+        <option>Bedding</option>
+        <option>Towels</option>
+        <option>Toiletries</option>
+        <option>Cleaning Supplies</option>
+        <option>Other Consumables</option>
+      </select>
+
+      <label for="updateUnit">Unit</label>
+      <input id="updateUnit" type="text" required />
+
+      <label for="updateStock">In Stock</label>
+      <input id="updateStock" type="number" min="0" required />
+
+      <label for="updateMinLevel">Minimum Level</label>
+      <input id="updateMinLevel" type="number" min="0" required />
+
+      <label for="updateDamaged">Damaged</label>
+      <input id="updateDamaged" type="number" min="0" required />
+
+      <label for="updateMissing">Missing</label>
+      <input id="updateMissing" type="number" min="0" required />
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="cancelUpdateDialogBtn">Cancel</button>
+        <button type="submit">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="Inventory.js"></script>
 </body>
 </html>

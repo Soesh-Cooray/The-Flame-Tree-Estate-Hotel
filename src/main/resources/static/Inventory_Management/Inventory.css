@@ -70,7 +70,7 @@ h1 {
 
 .layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
@@ -138,7 +138,7 @@ button {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
@@ -174,6 +174,99 @@ button {
   color: var(--text-muted);
   line-height: 1.45;
 }
+  .table-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .row-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .small-btn {
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+
+  .delete-btn {
+    background: linear-gradient(120deg, #ff5f5f, #ff9b6a);
+  }
+
+  #inventoryMessage {
+    margin-top: 10px;
+    color: var(--tone-gold);
+    font-weight: 600;
+  }
+
+  .inventory-dialog {
+    width: min(560px, calc(100% - 24px));
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    border: 1px solid rgba(248, 195, 101, 0.35);
+    border-radius: 14px;
+    background: linear-gradient(150deg, rgba(15, 61, 62, 0.94), rgba(14, 26, 27, 0.98));
+    color: var(--tone-cream);
+    box-shadow: var(--shadow);
+    padding: 0;
+  }
+
+  .inventory-dialog::backdrop {
+    background: rgba(3, 10, 12, 0.72);
+  }
+
+  .inventory-dialog .form {
+    padding: 16px;
+  }
+
+  .inventory-dialog h3 {
+    margin: 0 0 8px;
+    color: var(--tone-gold);
+  }
+
+  .inventory-dialog label {
+    color: var(--tone-cream);
+  }
+
+  .inventory-dialog input,
+  .inventory-dialog select,
+  .inventory-dialog textarea {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(248, 195, 101, 0.28);
+    color: var(--text-main);
+  }
+
+  .inventory-dialog input::placeholder,
+  .inventory-dialog textarea::placeholder {
+    color: rgba(247, 247, 245, 0.7);
+  }
+
+  .inventory-dialog input:focus,
+  .inventory-dialog select:focus,
+  .inventory-dialog textarea:focus {
+    border-color: rgba(255, 122, 61, 0.75);
+    box-shadow: 0 0 0 3px rgba(255, 122, 61, 0.2);
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .secondary-btn {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--tone-cream);
+    border: 1px solid rgba(248, 195, 101, 0.3);
+  }
+
+  .secondary-btn:hover {
+    background: rgba(248, 195, 101, 0.16);
+  }
+
 
 .table-wrap {
   overflow-x: auto;
