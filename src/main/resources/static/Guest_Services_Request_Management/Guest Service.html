@@ -21,66 +21,37 @@
     </header>
 
     <main class="layout">
-      <section class="panel">
-        <h2>Record Guest Service Requests</h2>
-        <form class="form" action="#" method="post">
-          <label for="guestName">Guest Name</label>
-          <input id="guestName" type="text" placeholder="Guest full name" required />
-
-          <label for="roomNo">Room Number</label>
-          <input id="roomNo" type="text" placeholder="e.g., 204" required />
-
-          <label for="requestType">Request Type</label>
-          <select id="requestType" required>
-            <option value="">Choose request type</option>
-            <option>Room Assistance</option>
-            <option>Extra Towels</option>
-            <option>Toiletries Refill</option>
-            <option>Cleaning Follow-up</option>
-            <option>Other</option>
-          </select>
-
-          <label for="priority">Priority</label>
-          <select id="priority" required>
-            <option value="">Choose priority</option>
-            <option>Normal</option>
-            <option>High</option>
-            <option>Urgent</option>
-          </select>
-
-          <label for="details">Request Details</label>
-          <textarea id="details" rows="4" placeholder="Add notes to help staff resolve this quickly" required></textarea>
-
-          <button type="submit">Record Request</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <h2>Assign Requests to Staff</h2>
-        <form class="form" action="#" method="post">
-          <label for="requestId">Request ID</label>
-          <input id="requestId" type="text" placeholder="e.g., GS-2026-021" required />
-
-          <label for="staffName">Assign To Staff</label>
-          <input id="staffName" type="text" placeholder="Staff name" required />
-
-          <label for="assignDept">Department</label>
-          <select id="assignDept" required>
-            <option value="">Choose department</option>
-            <option>Housekeeping</option>
-            <option>Maintenance</option>
-            <option>Front Desk Support</option>
-          </select>
-
-          <label for="eta">Expected Completion</label>
-          <input id="eta" type="datetime-local" required />
-
-          <button type="submit">Assign Request</button>
-        </form>
+      <section class="panel full-width">
+        <h2>Guest Service Overview</h2>
+        <div class="summary-grid">
+          <article class="summary-card">
+            <h3>Total Requests</h3>
+            <p class="metric" id="totalRequestsMetric">0</p>
+            <p>All service requests recorded in the system.</p>
+          </article>
+          <article class="summary-card">
+            <h3>Assigned</h3>
+            <p class="metric" id="assignedMetric">0</p>
+            <p>Requests awaiting staff completion.</p>
+          </article>
+          <article class="summary-card">
+            <h3>In Progress</h3>
+            <p class="metric" id="inProgressMetric">0</p>
+            <p>Requests currently being handled.</p>
+          </article>
+          <article class="summary-card">
+            <h3>Completed</h3>
+            <p class="metric" id="completedMetric">0</p>
+            <p>Finished requests.</p>
+          </article>
+        </div>
       </section>
 
       <section class="panel full-width">
-        <h2>View Assigned Requests</h2>
+        <h2>Manage Requests</h2>
+        <div class="table-actions">
+          <button type="button" id="openAddDialogBtn">Add Request</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -90,39 +61,99 @@
                 <th>Request</th>
                 <th>Assigned Staff</th>
                 <th>Status</th>
-                <th>Completion</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>GS-2026-021</td>
-                <td>Ms. Perera / 204</td>
-                <td>Extra Towels</td>
-                <td>N. Silva</td>
-                <td><span class="tag in-progress">In Progress</span></td>
-                <td>ETA 15 mins</td>
-              </tr>
-              <tr>
-                <td>GS-2026-022</td>
-                <td>Mr. Adams / 116</td>
-                <td>Room Assistance</td>
-                <td>R. Fernando</td>
-                <td><span class="tag assigned">Assigned</span></td>
-                <td>ETA 10 mins</td>
-              </tr>
-              <tr>
-                <td>GS-2026-019</td>
-                <td>Dr. Khan / 308</td>
-                <td>Toiletries Refill</td>
-                <td>P. Nuwan</td>
-                <td><span class="tag completed">Completed</span></td>
-                <td>Done 8:42 AM</td>
-              </tr>
-            </tbody>
+            <tbody id="requestsTableBody"></tbody>
           </table>
         </div>
+        <p id="requestMessage" aria-live="polite"></p>
       </section>
     </main>
   </div>
+
+  <dialog id="addRequestDialog" class="request-dialog">
+    <form class="form" id="addRequestForm" method="dialog">
+      <h3>Add Guest Service Request</h3>
+
+      <label for="requestId">Request ID</label>
+      <input id="requestId" type="text" placeholder="e.g., GS-2026-021" required />
+
+      <label for="guestName">Guest Name</label>
+      <input id="guestName" type="text" placeholder="Guest full name" required />
+
+      <label for="roomNo">Room Number</label>
+      <input id="roomNo" type="text" placeholder="e.g., 204" required />
+
+      <label for="requestType">Request Type</label>
+      <select id="requestType" required>
+        <option value="">Choose request type</option>
+        <option>Room Assistance</option>
+        <option>Extra Towels</option>
+        <option>Toiletries Refill</option>
+        <option>Cleaning Follow-up</option>
+        <option>Other</option>
+      </select>
+
+      <label for="staffName">Assign To Staff</label>
+      <input id="staffName" type="text" placeholder="Staff name" required />
+
+      <label for="status">Status</label>
+      <select id="status" required>
+        <option>Assigned</option>
+        <option>In Progress</option>
+        <option>Completed</option>
+      </select>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="cancelAddDialogBtn">Cancel</button>
+        <button type="submit">Add Request</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="updateRequestDialog" class="request-dialog">
+    <form class="form" id="updateRequestForm" method="dialog">
+      <h3>Update Guest Service Request</h3>
+
+      <input id="updateRequestIndex" type="hidden" />
+
+      <label for="updateRequestId">Request ID</label>
+      <input id="updateRequestId" type="text" required />
+
+      <label for="updateGuestName">Guest Name</label>
+      <input id="updateGuestName" type="text" required />
+
+      <label for="updateRoomNo">Room Number</label>
+      <input id="updateRoomNo" type="text" required />
+
+      <label for="updateRequestType">Request Type</label>
+      <select id="updateRequestType" required>
+        <option value="">Choose request type</option>
+        <option>Room Assistance</option>
+        <option>Extra Towels</option>
+        <option>Toiletries Refill</option>
+        <option>Cleaning Follow-up</option>
+        <option>Other</option>
+      </select>
+
+      <label for="updateStaffName">Assigned Staff</label>
+      <input id="updateStaffName" type="text" required />
+
+      <label for="updateStatus">Status</label>
+      <select id="updateStatus" required>
+        <option>Assigned</option>
+        <option>In Progress</option>
+        <option>Completed</option>
+      </select>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="cancelUpdateDialogBtn">Cancel</button>
+        <button type="submit">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="Guest Service.js"></script>
 </body>
 </html>
