@@ -59,7 +59,7 @@
           <form class="form" action="#" method="post">
             <h3>Assign Role &amp; Permissions</h3>
             <label for="staffUser">Select User</label>
-            <input id="staffUser" type="text" placeholder="Search by username" required />
+            <input id="staffUser" type="text" placeholder="Search by username" list="usernames-list" required />
             <label for="role">Role</label>
             <select id="role" required>
               <option value="">Choose role</option>
@@ -71,10 +71,7 @@
               <option>Front Desk / Reception Staff</option>
               <option>Supplier &amp; Purchase Management</option>
             </select>
-            <label class="check"><input type="checkbox" /> Can approve inventory purchases</label>
-            <label class="check"><input type="checkbox" /> Can view cross-department reports</label>
-            <label class="check"><input type="checkbox" /> Can manage shift assignments</label>
-            <button type="submit">Save Permissions</button>
+            <button type="submit">Assign Role</button>
           </form>
         </div>
 
@@ -223,5 +220,7 @@
       </section>
     </main>
   </div>
+
+  <script src="manager-dashboard.js"></script>
 </body>
 </html>
