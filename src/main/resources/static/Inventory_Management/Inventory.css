@@ -1,11 +1,11 @@
 :root {
-  --bg-dark: #0e1a1b;
-  --bg-accent: #0f3d3e;
-  --tone-amber: #ff7a3d;
-  --tone-gold: #f8c365;
-  --tone-cream: #f4ede1;
-  --text-main: #f7f7f5;
-  --text-muted: #c8d3d5;
+  --bg-dark: #141218;
+  --bg-accent: #2b2233;
+  --tone-amber: #e472b8;
+  --tone-gold: #c892ff;
+  --tone-cream: #f2eaf9;
+  --text-main: #f3edf8;
+  --text-muted: #b9adc7;
   --stroke: rgba(255, 255, 255, 0.12);
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   --radius: 16px;
@@ -20,9 +20,9 @@ body {
   min-height: 100vh;
   font-family: 'Manrope', 'Space Grotesk', sans-serif;
   color: var(--text-main);
-  background: radial-gradient(circle at 20% 20%, rgba(255, 122, 61, 0.2), transparent 40%),
-    radial-gradient(circle at 80% 10%, rgba(248, 195, 101, 0.18), transparent 35%),
-    linear-gradient(135deg, #0c1516, #0f2b2c 45%, #0c1516 90%);
+  background: radial-gradient(circle at 20% 20%, rgba(228, 114, 184, 0.2), transparent 40%),
+    radial-gradient(circle at 80% 10%, rgba(200, 146, 255, 0.2), transparent 35%),
+    linear-gradient(135deg, #121015, #211b29 45%, #121015 90%);
   padding: 28px 18px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -44,6 +44,7 @@ body {
 .eyebrow {
   margin: 0;
   color: var(--tone-gold);
+  font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -52,6 +53,7 @@ body {
 
 h1 {
   margin: 8px 0;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .subtitle {
@@ -90,6 +92,7 @@ h1 {
   margin-top: 0;
   color: var(--tone-cream);
   font-size: 1.2rem;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .form {
@@ -130,9 +133,9 @@ button {
   border: none;
   border-radius: 10px;
   padding: 11px 12px;
-  color: #0c1516;
+  color: #1a1320;
   font-weight: 800;
-  background: linear-gradient(120deg, #ff7a3d, #f8c365);
+  background: linear-gradient(120deg, #e472b8, #c892ff);
   cursor: pointer;
 }
 
@@ -192,7 +195,7 @@ button {
   }
 
   .delete-btn {
-    background: linear-gradient(120deg, #ff5f5f, #ff9b6a);
+    background: linear-gradient(120deg, #f06ca8, #d48bff);
   }
 
   #inventoryMessage {
@@ -205,9 +208,9 @@ button {
     width: min(560px, calc(100% - 24px));
     max-height: calc(100vh - 24px);
     overflow-y: auto;
-    border: 1px solid rgba(248, 195, 101, 0.35);
+    border: 1px solid rgba(200, 146, 255, 0.4);
     border-radius: 14px;
-    background: linear-gradient(150deg, rgba(15, 61, 62, 0.94), rgba(14, 26, 27, 0.98));
+    background: linear-gradient(150deg, rgba(43, 34, 51, 0.95), rgba(20, 18, 24, 0.98));
     color: var(--tone-cream);
     box-shadow: var(--shadow);
     padding: 0;
@@ -224,6 +227,7 @@ button {
   .inventory-dialog h3 {
     margin: 0 0 8px;
     color: var(--tone-gold);
+    font-family: 'Space Grotesk', sans-serif;
   }
 
   .inventory-dialog label {
@@ -234,7 +238,7 @@ button {
   .inventory-dialog select,
   .inventory-dialog textarea {
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(248, 195, 101, 0.28);
+    border: 1px solid rgba(200, 146, 255, 0.35);
     color: var(--text-main);
   }
 
@@ -246,8 +250,8 @@ button {
   .inventory-dialog input:focus,
   .inventory-dialog select:focus,
   .inventory-dialog textarea:focus {
-    border-color: rgba(255, 122, 61, 0.75);
-    box-shadow: 0 0 0 3px rgba(255, 122, 61, 0.2);
+    border-color: rgba(228, 114, 184, 0.85);
+    box-shadow: 0 0 0 3px rgba(228, 114, 184, 0.22);
   }
 
   .dialog-actions {
@@ -260,11 +264,11 @@ button {
   .secondary-btn {
     background: rgba(255, 255, 255, 0.12);
     color: var(--tone-cream);
-    border: 1px solid rgba(248, 195, 101, 0.3);
+    border: 1px solid rgba(200, 146, 255, 0.4);
   }
 
   .secondary-btn:hover {
-    background: rgba(248, 195, 101, 0.16);
+    background: rgba(200, 146, 255, 0.16);
   }
 
 
@@ -303,7 +307,7 @@ th {
 
 .tag.low {
   background: rgba(248, 195, 101, 0.2);
-  color: var(--tone-gold);
+  color: #ffd68a;
 }
 
 .tag.watch {
