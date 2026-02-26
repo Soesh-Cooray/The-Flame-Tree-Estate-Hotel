@@ -25,3 +25,6 @@ replay_pid*
 .vscode/settings.json
 /target
 .idea/dataSources.xml
+/target
+target/classes/application.properties
+*.xml
