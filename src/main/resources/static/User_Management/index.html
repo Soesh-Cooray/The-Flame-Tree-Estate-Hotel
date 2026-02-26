@@ -96,42 +96,76 @@
     const loginForm = document.getElementById('loginForm');
     const roleInputs = document.querySelectorAll('input[name="role"]');
     const roleNote = document.getElementById('roleNote');
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
 
     const managerMessage = 'Manager access includes user account creation, role assignment, account deactivation, and secure role-based access control.';
     const nonManagerMessage = 'You selected a non-manager role. Please continue sign-in to access your assigned area.';
 
+    const roleRoutes = {
+      'Manager': 'manager-dashboard.html',
+      'Staff Supervisor': 'supervisor-dashboard.html',
+      'Housekeeping Staff': '../Room_&_Housekeeping_Management/housekeeping.html',
+      'Inventory/Store Manager': '../Inventory_Management/Inventory.html',
+      'Maintenance Staff': '../Maintenance_and_Damaged_Item_Tracking/Maintenance.html',
+      'Front Desk / Reception Staff': '../Guest_Services_Request_Management/Guest Service.html',
+      'Supplier & Purchase Management': '../Supplier_&_Purchase_Management/Supplier.html'
+    };
+
     roleInputs.forEach((input) => {
       input.addEventListener('change', () => {
         roleNote.textContent = input.value === 'Manager' ? managerMessage : nonManagerMessage;
+        roleNote.style.color = '';
       });
     });
 
-    loginForm.addEventListener('submit', (event) => {
+    loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const selectedRole = document.querySelector('input[name="role"]:checked');
 
       if (!selectedRole) {
         roleNote.textContent = 'Please select a role to continue.';
+        roleNote.style.color = '#c0392b';
         return;
       }
 
-      const roleRoutes = {
-        'Manager': 'manager-dashboard.html',
-        'Staff Supervisor': 'supervisor-dashboard.html',
-        'Housekeeping Staff': '../Room_&_Housekeeping_Management/housekeeping.html',
-        'Inventory/Store Manager': '../Inventory_Management/Inventory.html',
-        'Maintenance Staff': '../Maintenance_and_Damaged_Item_Tracking/Maintenance.html',
-        'Front Desk / Reception Staff': '../Guest_Services_Request_Management/Guest Service.html',
-        'Supplier &amp; Purchase Management': '../Supplier_&_Purchase_Management/Supplier.html'
-      };
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const role = selectedRole.value;
 
-      const route = roleRoutes[selectedRole.value];
-      if (route) {
-        window.location.href = route;
-        return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing in...';
+
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, role })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          const route = roleRoutes[role];
+          if (route) {
+            window.location.href = route;
+          } else {
+            roleNote.textContent = 'No module mapped for this role.';
+            roleNote.style.color = '#c0392b';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign in';
+          }
+        } else {
+          roleNote.textContent = data.message || 'Login failed. Please try again.';
+          roleNote.style.color = '#c0392b';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign in';
+        }
+      } catch (err) {
+        roleNote.textContent = 'Unable to connect to the server. Please try again.';
+        roleNote.style.color = '#c0392b';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign in';
       }
-
-      roleNote.textContent = 'Manager dashboard is restricted. Continue with your role-specific module.';
     });
   </script>
 </body>
