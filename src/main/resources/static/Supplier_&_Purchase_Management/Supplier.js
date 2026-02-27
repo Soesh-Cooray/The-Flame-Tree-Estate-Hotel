@@ -1,78 +1,32 @@
 /**
  * Supplier & Purchase Management
- * Dynamic CRUD operations with localStorage persistence
+ * CRUD operations backed by the /orders REST API
  */
 
-const STORAGE_KEY = 'purchaseOrders';
-
-// Default sample data
-const defaultPos = [
-  {
-    poId: 'PO-2026-048',
-    supplierName: 'Island Linen Co.',
-    itemName: 'Bath Towels',
-    orderedQty: 120,
-    poStatus: 'Complete',
-  },
-  {
-    poId: 'PO-2026-049',
-    supplierName: 'PureCare Supplies',
-    itemName: 'Toiletry Kits',
-    orderedQty: 300,
-    poStatus: 'Partial',
-  },
-  {
-    poId: 'PO-2026-050',
-    supplierName: 'CleanPro Lanka',
-    itemName: 'Floor Cleaner',
-    orderedQty: 80,
-    poStatus: 'Pending',
-  },
-];
-
-// Initialize application
 document.addEventListener('DOMContentLoaded', () => {
-  loadPos();
-  renderMetrics();
-  renderTable();
+  loadAndRender();
   attachEventListeners();
 });
 
-// Load POs from localStorage
-function loadPos() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultPos));
+async function loadAndRender() {
+  try {
+    const res = await fetch('/orders/list');
+    if (!res.ok) throw new Error('Failed to load purchase orders.');
+    const pos = await res.json();
+    renderMetrics(pos);
+    renderTable(pos);
+  } catch (err) {
+    showMessage('Error loading purchase orders: ' + err.message);
   }
 }
 
-// Get POs from storage
-function getPos() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : defaultPos;
+function renderMetrics(pos) {
+  document.getElementById('totalPosMetric').textContent = pos.length;
+  document.getElementById('pendingMetric').textContent = pos.filter((p) => p.status === 'Pending').length;
+  document.getElementById('partialMetric').textContent = pos.filter((p) => p.status === 'Partial').length;
+  document.getElementById('completeMetric').textContent = pos.filter((p) => p.status === 'Complete').length;
 }
 
-// Save POs to storage
-function savePos(pos) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
-}
-
-// Render summary metrics
-function renderMetrics() {
-  const pos = getPos();
-
-  const totalPos = pos.length;
-  const pendingCount = pos.filter((p) => p.poStatus === 'Pending').length;
-  const partialCount = pos.filter((p) => p.poStatus === 'Partial').length;
-  const completeCount = pos.filter((p) => p.poStatus === 'Complete').length;
-
-  document.getElementById('totalPosMetric').textContent = totalPos;
-  document.getElementById('pendingMetric').textContent = pendingCount;
-  document.getElementById('partialMetric').textContent = partialCount;
-  document.getElementById('completeMetric').textContent = completeCount;
-}
-
-// Get status tag styling
 function statusFromPo(status) {
   const statusMap = {
     'Pending': 'pending',
@@ -82,9 +36,7 @@ function statusFromPo(status) {
   return statusMap[status] || 'pending';
 }
 
-// Render dynamic table
-function renderTable() {
-  const pos = getPos();
+function renderTable(pos) {
   const tbody = document.getElementById('posTableBody');
   tbody.innerHTML = '';
 
@@ -99,20 +51,19 @@ function renderTable() {
     return;
   }
 
-  pos.forEach((po, index) => {
-    const statusClass = statusFromPo(po.poStatus);
+  pos.forEach((po) => {
+    const statusClass = statusFromPo(po.status);
     const row = document.createElement('tr');
-    row.dataset.index = index;
     row.innerHTML = `
-      <td>${escapeHtml(po.poId)}</td>
-      <td>${escapeHtml(po.supplierName)}</td>
-      <td>${escapeHtml(po.itemName)}</td>
-      <td>${po.orderedQty}</td>
-      <td><span class="tag ${statusClass}">${escapeHtml(po.poStatus)}</span></td>
+      <td>${escapeHtml(po.poid)}</td>
+      <td>${escapeHtml(po.supplier)}</td>
+      <td>${escapeHtml(po.item)}</td>
+      <td>${po.qty}</td>
+      <td><span class="tag ${statusClass}">${escapeHtml(po.status)}</span></td>
       <td>
         <div class="action-buttons">
-          <button type="button" class="edit-btn" data-action="edit" data-index="${index}">Edit</button>
-          <button type="button" class="delete-btn" data-action="delete" data-index="${index}">Delete</button>
+          <button type="button" class="edit-btn" data-action="edit" data-id="${po.id}">Edit</button>
+          <button type="button" class="delete-btn" data-action="delete" data-id="${po.id}" data-poid="${escapeHtml(po.poid)}">Delete</button>
         </div>
       </td>
     `;
@@ -120,12 +71,9 @@ function renderTable() {
   });
 }
 
-// Event delegation for row actions
 function attachEventListeners() {
-  // Add PO button
   document.getElementById('openAddDialogBtn').addEventListener('click', openAddDialog);
 
-  // Cancel buttons
   document.getElementById('cancelAddDialogBtn').addEventListener('click', () => {
     document.getElementById('addPoDialog').close();
   });
@@ -134,108 +82,151 @@ function attachEventListeners() {
     document.getElementById('updatePoDialog').close();
   });
 
-  // Add form submission
   document.getElementById('addPoForm').addEventListener('submit', handleAddSubmit);
-
-  // Update form submission
   document.getElementById('updatePoForm').addEventListener('submit', handleUpdateSubmit);
 
-  // Row action delegation
-  document.getElementById('posTableBody').addEventListener('click', (e) => {
-    if (e.target.dataset.action === 'edit') {
-      openUpdateDialog(parseInt(e.target.dataset.index));
-    } else if (e.target.dataset.action === 'delete') {
-      handleDelete(parseInt(e.target.dataset.index));
+  document.getElementById('posTableBody').addEventListener('click', async (e) => {
+    const action = e.target.dataset.action;
+    const id = Number(e.target.dataset.id);
+
+    if (!action || !id) return;
+
+    if (action === 'edit') {
+      await openUpdateDialog(id);
+    } else if (action === 'delete') {
+      const poidLabel = e.target.dataset.poid || 'this order';
+      await handleDelete(id, poidLabel);
     }
   });
 }
 
-// Open add dialog
 function openAddDialog() {
   document.getElementById('addPoForm').reset();
   document.getElementById('addPoDialog').showModal();
 }
 
-// Open update dialog
-function openUpdateDialog(index) {
-  const pos = getPos();
-  const po = pos[index];
+async function openUpdateDialog(id) {
+  try {
+    const res = await fetch('/orders/list');
+    const pos = await res.json();
+    const po = pos.find((p) => p.id === id);
 
-  if (!po) return;
+    if (!po) {
+      showMessage('Purchase order not found.');
+      return;
+    }
 
-  document.getElementById('updatePoIndex').value = index;
-  document.getElementById('updatePoId').value = po.poId;
-  document.getElementById('updateSupplierName').value = po.supplierName;
-  document.getElementById('updateItemName').value = po.itemName;
-  document.getElementById('updateOrderedQty').value = po.orderedQty;
-  document.getElementById('updatePoStatus').value = po.poStatus;
+    document.getElementById('updatePoDbId').value = String(po.id);
+    document.getElementById('updatePoId').value = po.poid;
+    document.getElementById('updateSupplierName').value = po.supplier;
+    document.getElementById('updateItemName').value = po.item;
+    document.getElementById('updateOrderedQty').value = String(po.qty);
+    document.getElementById('updatePoStatus').value = po.status;
 
-  document.getElementById('updatePoDialog').showModal();
-}
-
-// Handle add form submission
-function handleAddSubmit(e) {
-  e.preventDefault();
-
-  const pos = getPos();
-  const newPo = {
-    poId: document.getElementById('poId').value,
-    supplierName: document.getElementById('supplierName').value,
-    itemName: document.getElementById('itemName').value,
-    orderedQty: parseInt(document.getElementById('orderedQty').value),
-    poStatus: document.getElementById('poStatus').value,
-  };
-
-  pos.push(newPo);
-  savePos(pos);
-
-  renderMetrics();
-  renderTable();
-  document.getElementById('addPoDialog').close();
-  showMessage('Purchase order added successfully!');
-}
-
-// Handle update form submission
-function handleUpdateSubmit(e) {
-  e.preventDefault();
-
-  const index = parseInt(document.getElementById('updatePoIndex').value);
-  const pos = getPos();
-
-  if (index >= 0 && index < pos.length) {
-    pos[index] = {
-      poId: document.getElementById('updatePoId').value,
-      supplierName: document.getElementById('updateSupplierName').value,
-      itemName: document.getElementById('updateItemName').value,
-      orderedQty: parseInt(document.getElementById('updateOrderedQty').value),
-      poStatus: document.getElementById('updatePoStatus').value,
-    };
-
-    savePos(pos);
-    renderMetrics();
-    renderTable();
-    document.getElementById('updatePoDialog').close();
-    showMessage('Purchase order updated successfully!');
+    document.getElementById('updatePoDialog').showModal();
+  } catch {
+    showMessage('Error fetching order details.');
   }
 }
 
-// Handle delete
-function handleDelete(index) {
-  if (!confirm('Are you sure you want to delete this purchase order?')) {
+async function handleAddSubmit(e) {
+  e.preventDefault();
+
+  const poid = document.getElementById('poId').value.trim();
+  if (!poid) {
+    showMessage('Please enter a valid PO ID.');
     return;
   }
 
-  const pos = getPos();
-  if (index >= 0 && index < pos.length) {
-    pos.splice(index, 1);
-    savePos(pos);
-    renderMetrics();
-    renderTable();
-    showMessage('Purchase order deleted successfully!');
+  const payload = {
+    poid,
+    supplier: document.getElementById('supplierName').value.trim(),
+    item: document.getElementById('itemName').value.trim(),
+    qty: parseInt(document.getElementById('orderedQty').value, 10),
+    status: document.getElementById('poStatus').value,
+  };
+
+  try {
+    const res = await fetch('/orders/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMessage(data.message || 'Failed to add purchase order.');
+      return;
+    }
+
+    document.getElementById('addPoDialog').close();
+    document.getElementById('addPoForm').reset();
+    showMessage(data.message || 'Purchase order added successfully!');
+    await loadAndRender();
+  } catch {
+    showMessage('Error adding purchase order.');
   }
 }
 
-// Show temporary message
+async function handleUpdateSubmit(e) {
+  e.preventDefault();
+
+  const id = Number(document.getElementById('updatePoDbId').value);
+  const poid = document.getElementById('updatePoId').value.trim();
+
+  if (!poid) {
+    showMessage('Please enter a valid PO ID.');
+    return;
+  }
+
+  const payload = {
+    id,
+    poid,
+    supplier: document.getElementById('updateSupplierName').value.trim(),
+    item: document.getElementById('updateItemName').value.trim(),
+    qty: parseInt(document.getElementById('updateOrderedQty').value, 10),
+    status: document.getElementById('updatePoStatus').value,
+  };
+
+  try {
+    const res = await fetch('/orders/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMessage(data.message || 'Failed to update purchase order.');
+      return;
+    }
+
+    document.getElementById('updatePoDialog').close();
+    document.getElementById('updatePoForm').reset();
+    showMessage(data.message || 'Purchase order updated successfully!');
+    await loadAndRender();
+  } catch {
+    showMessage('Error updating purchase order.');
+  }
+}
+
+async function handleDelete(id, poidLabel) {
+  if (!confirm(`Are you sure you want to delete purchase order ${poidLabel}?`)) return;
+
+  try {
+    const res = await fetch('/orders/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    showMessage(data.message || 'Purchase order deleted successfully!');
+    await loadAndRender();
+  } catch {
+    showMessage('Error deleting purchase order.');
+  }
+}
+
 function showMessage(message) {
   const messageEl = document.getElementById('poMessage');
   messageEl.textContent = message;
@@ -246,9 +237,8 @@ function showMessage(message) {
   }, 3000);
 }
 
-// HTML escape utility
 function escapeHtml(text) {
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = text ?? '';
   return div.innerHTML;
 }
