@@ -91,9 +91,6 @@
         <option>Other Consumables</option>
       </select>
 
-      <label for="unit">Unit</label>
-      <input id="unit" type="text" placeholder="e.g., Pieces, Packs, Bottles" required />
-
       <label for="openingQty">Opening Quantity</label>
       <input id="openingQty" type="number" min="0" placeholder="0" required />
 
@@ -111,7 +108,7 @@
     <form class="form" id="updateItemForm" method="dialog">
       <h3>Update Inventory Item</h3>
 
-      <input id="updateItemIndex" type="hidden" />
+      <input id="updateItemId" type="hidden" />
 
       <label for="updateItemName">Item Name</label>
       <input id="updateItemName" type="text" required />
@@ -125,9 +122,6 @@
         <option>Cleaning Supplies</option>
         <option>Other Consumables</option>
       </select>
-
-      <label for="updateUnit">Unit</label>
-      <input id="updateUnit" type="text" required />
 
       <label for="updateStock">In Stock</label>
       <input id="updateStock" type="number" min="0" required />

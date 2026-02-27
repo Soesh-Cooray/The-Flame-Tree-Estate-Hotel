@@ -1,44 +1,3 @@
-const STORAGE_KEY = 'flameTreeInventoryItems';
-
-const defaultItems = [
-  {
-    name: 'Bath Towels',
-    category: 'Towels',
-    unit: 'Pieces',
-    inStock: 128,
-    minLevel: 70,
-    damaged: 2,
-    missing: 1
-  },
-  {
-    name: 'Toilet Tissue Packs',
-    category: 'Toiletries',
-    unit: 'Packs',
-    inStock: 45,
-    minLevel: 50,
-    damaged: 1,
-    missing: 0
-  },
-  {
-    name: 'Bed Sheets - King',
-    category: 'Bedding',
-    unit: 'Pieces',
-    inStock: 66,
-    minLevel: 60,
-    damaged: 1,
-    missing: 1
-  },
-  {
-    name: 'Glass Cleaner',
-    category: 'Cleaning Supplies',
-    unit: 'Bottles',
-    inStock: 22,
-    minLevel: 20,
-    damaged: 0,
-    missing: 0
-  }
-];
-
 const addItemForm = document.getElementById('addItemForm');
 const updateItemForm = document.getElementById('updateItemForm');
 const addItemDialog = document.getElementById('addItemDialog');
@@ -55,51 +14,21 @@ const inventoryMessage = document.getElementById('inventoryMessage');
 
 const itemNameInput = document.getElementById('itemName');
 const categoryInput = document.getElementById('category');
-const unitInput = document.getElementById('unit');
 const openingQtyInput = document.getElementById('openingQty');
 const minLevelInput = document.getElementById('minLevel');
 
-const updateItemIndexInput = document.getElementById('updateItemIndex');
+const updateItemIdInput = document.getElementById('updateItemId');
 const updateItemNameInput = document.getElementById('updateItemName');
 const updateCategoryInput = document.getElementById('updateCategory');
-const updateUnitInput = document.getElementById('updateUnit');
 const updateStockInput = document.getElementById('updateStock');
 const updateMinLevelInput = document.getElementById('updateMinLevel');
 const updateDamagedInput = document.getElementById('updateDamaged');
 const updateMissingInput = document.getElementById('updateMissing');
 
-function loadItems() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultItems));
-    return [...defaultItems];
-  }
-
-  try {
-    const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    return [...defaultItems];
-  } catch {
-    return [...defaultItems];
-  }
-}
-
-function saveItems(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
-
-function statusFromItem(item) {
-  if (item.inStock <= item.minLevel) {
-    return { label: 'Low Stock', className: 'low' };
-  }
-
-  if (item.damaged > 0 || item.missing > 0) {
-    return { label: 'Monitor', className: 'watch' };
-  }
-
-  return { label: 'Healthy', className: 'ok' };
+function statusClass(status) {
+  if (status === 'Low Stock') return 'low';
+  if (status === 'Monitor') return 'watch';
+  return 'ok';
 }
 
 function renderTable(items) {
@@ -112,22 +41,22 @@ function renderTable(items) {
     return;
   }
 
-  items.forEach((item, index) => {
+  items.forEach((item) => {
     const row = document.createElement('tr');
-    const status = statusFromItem(item);
+    const cls = statusClass(item.status);
 
     row.innerHTML = `
-      <td>${item.name}</td>
+      <td>${item.item}</td>
       <td>${item.category}</td>
       <td>${item.inStock}</td>
       <td>${item.minLevel}</td>
       <td>${item.damaged}</td>
       <td>${item.missing}</td>
-      <td><span class="tag ${status.className}">${status.label}</span></td>
+      <td><span class="tag ${cls}">${item.status}</span></td>
       <td>
         <div class="row-actions">
-          <button type="button" class="small-btn" data-action="edit" data-index="${index}">Update</button>
-          <button type="button" class="small-btn delete-btn" data-action="delete" data-index="${index}">Delete</button>
+          <button type="button" class="small-btn" data-action="edit" data-id="${item.id}">Update</button>
+          <button type="button" class="small-btn delete-btn" data-action="delete" data-id="${item.id}" data-name="${item.item}">Delete</button>
         </div>
       </td>
     `;
@@ -138,7 +67,7 @@ function renderTable(items) {
 
 function renderMetrics(items) {
   totalItemsMetric.textContent = String(items.length).padStart(2, '0');
-  lowStockMetric.textContent = String(items.filter((item) => item.inStock <= item.minLevel).length).padStart(2, '0');
+  lowStockMetric.textContent = String(items.filter((item) => item.status === 'Low Stock').length).padStart(2, '0');
   damagedMetric.textContent = String(items.reduce((sum, item) => sum + Number(item.damaged || 0), 0)).padStart(2, '0');
   missingMetric.textContent = String(items.reduce((sum, item) => sum + Number(item.missing || 0), 0)).padStart(2, '0');
 }
@@ -152,31 +81,26 @@ function showMessage(message) {
   inventoryMessage.textContent = message;
 }
 
-function openUpdateDialog(item, index) {
-  updateItemIndexInput.value = String(index);
-  updateItemNameInput.value = item.name;
+async function loadAndRender() {
+  try {
+    const res = await fetch('/inventory/list');
+    if (!res.ok) throw new Error('Failed to load inventory.');
+    const items = await res.json();
+    renderAll(items);
+  } catch (err) {
+    showMessage('Error loading inventory: ' + err.message);
+  }
+}
+
+function openUpdateDialog(item) {
+  updateItemIdInput.value = String(item.id);
+  updateItemNameInput.value = item.item;
   updateCategoryInput.value = item.category;
-  updateUnitInput.value = item.unit;
   updateStockInput.value = String(item.inStock);
   updateMinLevelInput.value = String(item.minLevel);
   updateDamagedInput.value = String(item.damaged);
   updateMissingInput.value = String(item.missing);
   updateItemDialog.showModal();
-}
-
-function deleteItem(index) {
-  const items = loadItems();
-  const target = items[index];
-
-  if (!target) {
-    showMessage('Item not found for deletion.');
-    return;
-  }
-
-  items.splice(index, 1);
-  saveItems(items);
-  renderAll(items);
-  showMessage(`Deleted item: ${target.name}.`);
 }
 
 openAddDialogBtn.addEventListener('click', () => {
@@ -192,103 +116,133 @@ cancelUpdateDialogBtn.addEventListener('click', () => {
   updateItemDialog.close();
 });
 
-inventoryTableBody.addEventListener('click', (event) => {
+inventoryTableBody.addEventListener('click', async (event) => {
   const target = event.target;
 
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
+  if (!(target instanceof HTMLElement)) return;
 
   const action = target.getAttribute('data-action');
-  const indexValue = target.getAttribute('data-index');
+  const idValue = target.getAttribute('data-id');
 
-  if (!action || indexValue === null) {
-    return;
-  }
+  if (!action || idValue === null) return;
 
-  const index = Number(indexValue);
-  const items = loadItems();
-  const item = items[index];
-
-  if (!item) {
-    showMessage('Unable to find selected item.');
-    return;
-  }
+  const id = Number(idValue);
 
   if (action === 'edit') {
-    openUpdateDialog(item, index);
+    try {
+      const res = await fetch('/inventory/list');
+      const items = await res.json();
+      const item = items.find((i) => i.id === id);
+      if (item) {
+        openUpdateDialog(item);
+      } else {
+        showMessage('Unable to find selected item.');
+      }
+    } catch {
+      showMessage('Error fetching item details.');
+    }
     return;
   }
 
   if (action === 'delete') {
-    const isConfirmed = window.confirm(`Delete ${item.name}? This cannot be undone.`);
-    if (isConfirmed) {
-      deleteItem(index);
+    const name = target.getAttribute('data-name') || 'this item';
+    const isConfirmed = window.confirm(`Delete ${name}? This cannot be undone.`);
+    if (!isConfirmed) return;
+
+    try {
+      const res = await fetch('/inventory/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      showMessage(data.message || 'Item deleted.');
+      await loadAndRender();
+    } catch {
+      showMessage('Error deleting item.');
     }
   }
 });
 
-addItemForm.addEventListener('submit', (event) => {
+addItemForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const items = loadItems();
+
   const itemName = itemNameInput.value.trim();
+  if (!itemName) {
+    showMessage('Please enter a valid item name.');
+    return;
+  }
+
+  const payload = {
+    item: itemName,
+    category: categoryInput.value,
+    inStock: Number(openingQtyInput.value || 0),
+    minLevel: Number(minLevelInput.value || 0)
+  };
+
+  try {
+    const res = await fetch('/inventory/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMessage(data.message || 'Failed to add item.');
+      return;
+    }
+
+    addItemForm.reset();
+    addItemDialog.close();
+    showMessage(data.message || 'Item added.');
+    await loadAndRender();
+  } catch {
+    showMessage('Error adding item.');
+  }
+});
+
+updateItemForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const id = Number(updateItemIdInput.value);
+  const itemName = updateItemNameInput.value.trim();
 
   if (!itemName) {
     showMessage('Please enter a valid item name.');
     return;
   }
 
-  const existing = items.find((item) => item.name.toLowerCase() === itemName.toLowerCase());
-  if (existing) {
-    showMessage('Item already exists. Use Update on the item row.');
-    return;
+  const payload = {
+    id,
+    item: itemName,
+    category: updateCategoryInput.value,
+    inStock: Math.max(0, Number(updateStockInput.value || 0)),
+    minLevel: Math.max(0, Number(updateMinLevelInput.value || 0)),
+    damaged: Math.max(0, Number(updateDamagedInput.value || 0)),
+    missing: Math.max(0, Number(updateMissingInput.value || 0))
+  };
+
+  try {
+    const res = await fetch('/inventory/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMessage(data.message || 'Failed to update item.');
+      return;
+    }
+
+    updateItemForm.reset();
+    updateItemDialog.close();
+    showMessage(data.message || 'Item updated.');
+    await loadAndRender();
+  } catch {
+    showMessage('Error updating item.');
   }
-
-  const openingQty = Number(openingQtyInput.value || 0);
-  const minLevel = Number(minLevelInput.value || 0);
-
-  items.push({
-    name: itemName,
-    category: categoryInput.value,
-    unit: unitInput.value.trim() || 'Units',
-    inStock: openingQty,
-    minLevel,
-    damaged: 0,
-    missing: 0
-  });
-
-  saveItems(items);
-  renderAll(items);
-  addItemForm.reset();
-  addItemDialog.close();
-  showMessage(`Added new item: ${itemName}.`);
 });
 
-updateItemForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-
-  const items = loadItems();
-  const index = Number(updateItemIndexInput.value);
-  const selectedItem = items[index];
-
-  if (!selectedItem) {
-    showMessage('Item not found for update.');
-    return;
-  }
-
-  selectedItem.name = updateItemNameInput.value.trim();
-  selectedItem.category = updateCategoryInput.value;
-  selectedItem.unit = updateUnitInput.value.trim() || 'Units';
-  selectedItem.inStock = Math.max(0, Number(updateStockInput.value || 0));
-  selectedItem.minLevel = Math.max(0, Number(updateMinLevelInput.value || 0));
-  selectedItem.damaged = Math.max(0, Number(updateDamagedInput.value || 0));
-  selectedItem.missing = Math.max(0, Number(updateMissingInput.value || 0));
-
-  saveItems(items);
-  renderAll(items);
-  updateItemForm.reset();
-  updateItemDialog.close();
-  showMessage(`Updated ${selectedItem.name}.`);
-});
-
-renderAll(loadItems());
+loadAndRender();
