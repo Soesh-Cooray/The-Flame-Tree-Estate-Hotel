@@ -1,29 +1,3 @@
-const STORAGE_KEY = 'flameTreeMaintenanceTickets';
-
-const defaultTickets = [
-  {
-    ticket: 'MT-2026-011',
-    location: 'Room 202',
-    issue: 'Leaking faucet',
-    assignedTo: 'R. Silva',
-    status: 'In Progress'
-  },
-  {
-    ticket: 'MT-2026-012',
-    location: 'Room 118',
-    issue: 'Damaged reading lamp',
-    assignedTo: 'M. Khan',
-    status: 'Replacement Needed'
-  },
-  {
-    ticket: 'MT-2026-013',
-    location: 'Lobby',
-    issue: 'AC not cooling',
-    assignedTo: 'T. Perera',
-    status: 'Open'
-  }
-];
-
 const openIssuesMetric = document.getElementById('openIssuesMetric');
 const inProgressMetric = document.getElementById('inProgressMetric');
 const repairedMetric = document.getElementById('repairedMetric');
@@ -46,51 +20,24 @@ const issueInput = document.getElementById('issue');
 const assignedToInput = document.getElementById('assignedTo');
 const statusInput = document.getElementById('status');
 
-const updateTicketIndexInput = document.getElementById('updateTicketIndex');
+const updateTicketDbIdInput = document.getElementById('updateTicketDbId');
 const updateTicketIdInput = document.getElementById('updateTicketId');
 const updateLocationInput = document.getElementById('updateLocation');
 const updateIssueInput = document.getElementById('updateIssue');
 const updateAssignedToInput = document.getElementById('updateAssignedTo');
 const updateStatusInput = document.getElementById('updateStatus');
 
-function loadTickets() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultTickets));
-    return [...defaultTickets];
-  }
-
-  try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [...defaultTickets];
-  } catch {
-    return [...defaultTickets];
-  }
-}
-
-function saveTickets(tickets) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
-}
-
 function statusClass(status) {
-  if (status === 'In Progress') {
-    return 'in-progress';
-  }
-  if (status === 'Replacement Needed') {
-    return 'replacement';
-  }
-  if (status === 'Repaired') {
-    return 'open';
-  }
+  if (status === 'In Progress') return 'in-progress';
+  if (status === 'Replacement Needed') return 'replacement';
   return 'open';
 }
 
 function renderMetrics(tickets) {
-  openIssuesMetric.textContent = String(tickets.filter((ticket) => ticket.status === 'Open').length).padStart(2, '0');
-  inProgressMetric.textContent = String(tickets.filter((ticket) => ticket.status === 'In Progress').length).padStart(2, '0');
-  repairedMetric.textContent = String(tickets.filter((ticket) => ticket.status === 'Repaired').length).padStart(2, '0');
-  replacementMetric.textContent = String(tickets.filter((ticket) => ticket.status === 'Replacement Needed').length).padStart(2, '0');
+  openIssuesMetric.textContent = String(tickets.filter((t) => t.status === 'Open').length).padStart(2, '0');
+  inProgressMetric.textContent = String(tickets.filter((t) => t.status === 'In Progress').length).padStart(2, '0');
+  repairedMetric.textContent = String(tickets.filter((t) => t.status === 'Repaired').length).padStart(2, '0');
+  replacementMetric.textContent = String(tickets.filter((t) => t.status === 'Replacement Needed').length).padStart(2, '0');
 }
 
 function renderTable(tickets) {
@@ -103,7 +50,7 @@ function renderTable(tickets) {
     return;
   }
 
-  tickets.forEach((ticket, index) => {
+  tickets.forEach((ticket) => {
     const row = document.createElement('tr');
     const tagClass = statusClass(ticket.status);
 
@@ -115,8 +62,8 @@ function renderTable(tickets) {
       <td><span class="tag ${tagClass}">${ticket.status}</span></td>
       <td>
         <div class="row-actions">
-          <button type="button" class="small-btn" data-action="edit" data-index="${index}">Update</button>
-          <button type="button" class="small-btn delete-btn" data-action="delete" data-index="${index}">Delete</button>
+          <button type="button" class="small-btn" data-action="edit" data-id="${ticket.id}">Update</button>
+          <button type="button" class="small-btn delete-btn" data-action="delete" data-id="${ticket.id}" data-ticket="${ticket.ticket}">Delete</button>
         </div>
       </td>
     `;
@@ -134,8 +81,19 @@ function showMessage(message) {
   maintenanceMessage.textContent = message;
 }
 
-function openUpdateDialog(ticket, index) {
-  updateTicketIndexInput.value = String(index);
+async function loadAndRender() {
+  try {
+    const res = await fetch('/maintenance/list');
+    if (!res.ok) throw new Error('Failed to load tickets.');
+    const tickets = await res.json();
+    renderAll(tickets);
+  } catch (err) {
+    showMessage('Error loading tickets: ' + err.message);
+  }
+}
+
+function openUpdateDialog(ticket) {
+  updateTicketDbIdInput.value = String(ticket.id);
   updateTicketIdInput.value = ticket.ticket;
   updateLocationInput.value = ticket.location;
   updateIssueInput.value = ticket.issue;
@@ -157,101 +115,132 @@ cancelUpdateDialogBtn.addEventListener('click', () => {
   updateTicketDialog.close();
 });
 
-addTicketForm.addEventListener('submit', (event) => {
+addTicketForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const tickets = loadTickets();
   const ticketId = ticketIdInput.value.trim();
+  if (!ticketId) {
+    showMessage('Please enter a valid ticket ID.');
+    return;
+  }
+
+  const payload = {
+    ticket: ticketId,
+    location: locationInput.value.trim(),
+    issue: issueInput.value.trim(),
+    assignedTo: assignedToInput.value.trim(),
+    status: statusInput.value
+  };
+
+  try {
+    const res = await fetch('/maintenance/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMessage(data.message || 'Failed to add ticket.');
+      return;
+    }
+
+    addTicketDialog.close();
+    addTicketForm.reset();
+    showMessage(data.message || 'Ticket added.');
+    await loadAndRender();
+  } catch {
+    showMessage('Error adding ticket.');
+  }
+});
+
+updateTicketForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const id = Number(updateTicketDbIdInput.value);
+  const ticketId = updateTicketIdInput.value.trim();
 
   if (!ticketId) {
     showMessage('Please enter a valid ticket ID.');
     return;
   }
 
-  const exists = tickets.some((ticket) => ticket.ticket.toLowerCase() === ticketId.toLowerCase());
-  if (exists) {
-    showMessage('Ticket ID already exists. Please use a unique ticket ID.');
-    return;
-  }
-
-  tickets.push({
+  const payload = {
+    id,
     ticket: ticketId,
-    location: locationInput.value.trim(),
-    issue: issueInput.value.trim(),
-    assignedTo: assignedToInput.value.trim(),
-    status: statusInput.value
-  });
+    location: updateLocationInput.value.trim(),
+    issue: updateIssueInput.value.trim(),
+    assignedTo: updateAssignedToInput.value.trim(),
+    status: updateStatusInput.value
+  };
 
-  saveTickets(tickets);
-  renderAll(tickets);
-  addTicketDialog.close();
-  addTicketForm.reset();
-  showMessage(`Added ticket ${ticketId}.`);
-});
+  try {
+    const res = await fetch('/maintenance/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
 
-updateTicketForm.addEventListener('submit', (event) => {
-  event.preventDefault();
+    if (!data.success) {
+      showMessage(data.message || 'Failed to update ticket.');
+      return;
+    }
 
-  const tickets = loadTickets();
-  const index = Number(updateTicketIndexInput.value);
-  const target = tickets[index];
-
-  if (!target) {
-    showMessage('Unable to update ticket.');
-    return;
+    updateTicketDialog.close();
+    updateTicketForm.reset();
+    showMessage(data.message || 'Ticket updated.');
+    await loadAndRender();
+  } catch {
+    showMessage('Error updating ticket.');
   }
-
-  target.ticket = updateTicketIdInput.value.trim();
-  target.location = updateLocationInput.value.trim();
-  target.issue = updateIssueInput.value.trim();
-  target.assignedTo = updateAssignedToInput.value.trim();
-  target.status = updateStatusInput.value;
-
-  saveTickets(tickets);
-  renderAll(tickets);
-  updateTicketDialog.close();
-  updateTicketForm.reset();
-  showMessage(`Updated ticket ${target.ticket}.`);
 });
 
-maintenanceTableBody.addEventListener('click', (event) => {
+maintenanceTableBody.addEventListener('click', async (event) => {
   const target = event.target;
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
+  if (!(target instanceof HTMLElement)) return;
 
   const action = target.getAttribute('data-action');
-  const indexValue = target.getAttribute('data-index');
+  const idValue = target.getAttribute('data-id');
 
-  if (!action || indexValue === null) {
-    return;
-  }
+  if (!action || idValue === null) return;
 
-  const index = Number(indexValue);
-  const tickets = loadTickets();
-  const ticket = tickets[index];
-
-  if (!ticket) {
-    showMessage('Selected ticket not found.');
-    return;
-  }
+  const id = Number(idValue);
 
   if (action === 'edit') {
-    openUpdateDialog(ticket, index);
+    try {
+      const res = await fetch('/maintenance/list');
+      const tickets = await res.json();
+      const ticket = tickets.find((t) => t.id === id);
+      if (ticket) {
+        openUpdateDialog(ticket);
+      } else {
+        showMessage('Selected ticket not found.');
+      }
+    } catch {
+      showMessage('Error fetching ticket details.');
+    }
     return;
   }
 
   if (action === 'delete') {
-    const confirmed = window.confirm(`Delete ticket ${ticket.ticket}?`);
-    if (!confirmed) {
-      return;
-    }
+    const ticketLabel = target.getAttribute('data-ticket') || 'this ticket';
+    const confirmed = window.confirm(`Delete ticket ${ticketLabel}?`);
+    if (!confirmed) return;
 
-    tickets.splice(index, 1);
-    saveTickets(tickets);
-    renderAll(tickets);
-    showMessage(`Deleted ticket ${ticket.ticket}.`);
+    try {
+      const res = await fetch('/maintenance/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      showMessage(data.message || 'Ticket deleted.');
+      await loadAndRender();
+    } catch {
+      showMessage('Error deleting ticket.');
+    }
   }
 });
 
-renderAll(loadTickets());
+loadAndRender();
