@@ -148,6 +148,7 @@ public class authController {
         List<Map<String, Object>> result = users.stream().map(u -> {
             Map<String, Object> map = new HashMap<>();
             map.put("username", u.getUsername());
+            map.put("staffEmail", u.getStaffEmail());
             map.put("role", u.getRole());
             map.put("status", u.isStatus());
             return map;
