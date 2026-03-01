@@ -1,81 +1,32 @@
 /**
  * Guest Service Requests Management
- * Dynamic CRUD operations with localStorage persistence
+ * CRUD operations backed by the /guestservice REST API
  */
 
-const STORAGE_KEY = 'guestServiceRequests';
-
-// Default sample data
-const defaultRequests = [
-  {
-    requestId: 'GS-2026-021',
-    guestName: 'Ms. Perera',
-    roomNo: '204',
-    requestType: 'Extra Towels',
-    assignedStaff: 'N. Silva',
-    status: 'In Progress',
-  },
-  {
-    requestId: 'GS-2026-022',
-    guestName: 'Mr. Adams',
-    roomNo: '116',
-    requestType: 'Room Assistance',
-    assignedStaff: 'R. Fernando',
-    status: 'Assigned',
-  },
-  {
-    requestId: 'GS-2026-019',
-    guestName: 'Dr. Khan',
-    roomNo: '308',
-    requestType: 'Toiletries Refill',
-    assignedStaff: 'P. Nuwan',
-    status: 'Completed',
-  },
-];
-
-// Initialize application
 document.addEventListener('DOMContentLoaded', () => {
-  loadRequests();
-  renderMetrics();
-  renderTable();
+  loadAndRender();
   attachEventListeners();
 });
 
-// Load requests from localStorage
-function loadRequests() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultRequests));
+async function loadAndRender() {
+  try {
+    const res = await fetch('/guestservice/list');
+    if (!res.ok) throw new Error('Failed to load requests.');
+    const requests = await res.json();
+    renderMetrics(requests);
+    renderTable(requests);
+  } catch (err) {
+    showMessage('Error loading requests: ' + err.message);
   }
 }
 
-// Get requests from storage
-function getRequests() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : defaultRequests;
+function renderMetrics(requests) {
+  document.getElementById('totalRequestsMetric').textContent = requests.length;
+  document.getElementById('assignedMetric').textContent = requests.filter((r) => r.status === 'Assigned').length;
+  document.getElementById('inProgressMetric').textContent = requests.filter((r) => r.status === 'In Progress').length;
+  document.getElementById('completedMetric').textContent = requests.filter((r) => r.status === 'Completed').length;
 }
 
-// Save requests to storage
-function saveRequests(requests) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
-}
-
-// Render summary metrics
-function renderMetrics() {
-  const requests = getRequests();
-
-  const totalRequests = requests.length;
-  const assignedCount = requests.filter((r) => r.status === 'Assigned').length;
-  const inProgressCount = requests.filter((r) => r.status === 'In Progress').length;
-  const completedCount = requests.filter((r) => r.status === 'Completed').length;
-
-  document.getElementById('totalRequestsMetric').textContent = totalRequests;
-  document.getElementById('assignedMetric').textContent = assignedCount;
-  document.getElementById('inProgressMetric').textContent = inProgressCount;
-  document.getElementById('completedMetric').textContent = completedCount;
-}
-
-// Get status tag styling
 function statusFromRequest(status) {
   const statusMap = {
     'Assigned': 'assigned',
@@ -85,9 +36,7 @@ function statusFromRequest(status) {
   return statusMap[status] || 'assigned';
 }
 
-// Render dynamic table
-function renderTable() {
-  const requests = getRequests();
+function renderTable(requests) {
   const tbody = document.getElementById('requestsTableBody');
   tbody.innerHTML = '';
 
@@ -102,20 +51,19 @@ function renderTable() {
     return;
   }
 
-  requests.forEach((request, index) => {
-    const statusClass = statusFromRequest(request.status);
+  requests.forEach((req) => {
+    const statusClass = statusFromRequest(req.status);
     const row = document.createElement('tr');
-    row.dataset.index = index;
     row.innerHTML = `
-      <td>${escapeHtml(request.requestId)}</td>
-      <td>${escapeHtml(request.guestName)} / ${escapeHtml(request.roomNo)}</td>
-      <td>${escapeHtml(request.requestType)}</td>
-      <td>${escapeHtml(request.assignedStaff)}</td>
-      <td><span class="tag ${statusClass}">${escapeHtml(request.status)}</span></td>
+      <td>${escapeHtml(req.requestId)}</td>
+      <td>${escapeHtml(req.guestRoom)}</td>
+      <td>${escapeHtml(req.request)}</td>
+      <td>${escapeHtml(req.assignedStaff)}</td>
+      <td><span class="tag ${statusClass}">${escapeHtml(req.status)}</span></td>
       <td>
         <div class="action-buttons">
-          <button type="button" class="edit-btn" data-action="edit" data-index="${index}">Edit</button>
-          <button type="button" class="delete-btn" data-action="delete" data-index="${index}">Delete</button>
+          <button type="button" class="edit-btn" data-action="edit" data-id="${req.id}">Edit</button>
+          <button type="button" class="delete-btn" data-action="delete" data-id="${req.id}" data-requestid="${escapeHtml(req.requestId)}">Delete</button>
         </div>
       </td>
     `;
@@ -123,12 +71,9 @@ function renderTable() {
   });
 }
 
-// Event delegation for row actions
 function attachEventListeners() {
-  // Add request button
   document.getElementById('openAddDialogBtn').addEventListener('click', openAddDialog);
 
-  // Cancel buttons
   document.getElementById('cancelAddDialogBtn').addEventListener('click', () => {
     document.getElementById('addRequestDialog').close();
   });
@@ -137,111 +82,151 @@ function attachEventListeners() {
     document.getElementById('updateRequestDialog').close();
   });
 
-  // Add form submission
   document.getElementById('addRequestForm').addEventListener('submit', handleAddSubmit);
-
-  // Update form submission
   document.getElementById('updateRequestForm').addEventListener('submit', handleUpdateSubmit);
 
-  // Row action delegation
-  document.getElementById('requestsTableBody').addEventListener('click', (e) => {
-    if (e.target.dataset.action === 'edit') {
-      openUpdateDialog(parseInt(e.target.dataset.index));
-    } else if (e.target.dataset.action === 'delete') {
-      handleDelete(parseInt(e.target.dataset.index));
+  document.getElementById('requestsTableBody').addEventListener('click', async (e) => {
+    const action = e.target.dataset.action;
+    const id = Number(e.target.dataset.id);
+
+    if (!action || !id) return;
+
+    if (action === 'edit') {
+      await openUpdateDialog(id);
+    } else if (action === 'delete') {
+      const requestLabel = e.target.dataset.requestid || 'this request';
+      await handleDelete(id, requestLabel);
     }
   });
 }
 
-// Open add dialog
 function openAddDialog() {
   document.getElementById('addRequestForm').reset();
   document.getElementById('addRequestDialog').showModal();
 }
 
-// Open update dialog
-function openUpdateDialog(index) {
-  const requests = getRequests();
-  const request = requests[index];
+async function openUpdateDialog(id) {
+  try {
+    const res = await fetch('/guestservice/list');
+    const requests = await res.json();
+    const req = requests.find((r) => r.id === id);
 
-  if (!request) return;
+    if (!req) {
+      showMessage('Request not found.');
+      return;
+    }
 
-  document.getElementById('updateRequestIndex').value = index;
-  document.getElementById('updateRequestId').value = request.requestId;
-  document.getElementById('updateGuestName').value = request.guestName;
-  document.getElementById('updateRoomNo').value = request.roomNo;
-  document.getElementById('updateRequestType').value = request.requestType;
-  document.getElementById('updateStaffName').value = request.assignedStaff;
-  document.getElementById('updateStatus').value = request.status;
+    document.getElementById('updateRequestDbId').value = String(req.id);
+    document.getElementById('updateRequestId').value = req.requestId;
+    document.getElementById('updateRoomNo').value = req.guestRoom;
+    document.getElementById('updateRequestType').value = req.request;
+    document.getElementById('updateStaffName').value = req.assignedStaff;
+    document.getElementById('updateStatus').value = req.status;
 
-  document.getElementById('updateRequestDialog').showModal();
-}
-
-// Handle add form submission
-function handleAddSubmit(e) {
-  e.preventDefault();
-
-  const requests = getRequests();
-  const newRequest = {
-    requestId: document.getElementById('requestId').value,
-    guestName: document.getElementById('guestName').value,
-    roomNo: document.getElementById('roomNo').value,
-    requestType: document.getElementById('requestType').value,
-    assignedStaff: document.getElementById('staffName').value,
-    status: document.getElementById('status').value,
-  };
-
-  requests.push(newRequest);
-  saveRequests(requests);
-
-  renderMetrics();
-  renderTable();
-  document.getElementById('addRequestDialog').close();
-  showMessage('Request added successfully!');
-}
-
-// Handle update form submission
-function handleUpdateSubmit(e) {
-  e.preventDefault();
-
-  const index = parseInt(document.getElementById('updateRequestIndex').value);
-  const requests = getRequests();
-
-  if (index >= 0 && index < requests.length) {
-    requests[index] = {
-      requestId: document.getElementById('updateRequestId').value,
-      guestName: document.getElementById('updateGuestName').value,
-      roomNo: document.getElementById('updateRoomNo').value,
-      requestType: document.getElementById('updateRequestType').value,
-      assignedStaff: document.getElementById('updateStaffName').value,
-      status: document.getElementById('updateStatus').value,
-    };
-
-    saveRequests(requests);
-    renderMetrics();
-    renderTable();
-    document.getElementById('updateRequestDialog').close();
-    showMessage('Request updated successfully!');
+    document.getElementById('updateRequestDialog').showModal();
+  } catch {
+    showMessage('Error fetching request details.');
   }
 }
 
-// Handle delete
-function handleDelete(index) {
-  if (!confirm('Are you sure you want to delete this request?')) {
+async function handleAddSubmit(e) {
+  e.preventDefault();
+
+  const requestId = document.getElementById('requestId').value.trim();
+  if (!requestId) {
+    showMessage('Please enter a valid Request ID.');
     return;
   }
 
-  const requests = getRequests();
-  if (index >= 0 && index < requests.length) {
-    requests.splice(index, 1);
-    saveRequests(requests);
-    renderMetrics();
-    renderTable();
-    showMessage('Request deleted successfully!');
+  const payload = {
+    requestId,
+    guestRoom: document.getElementById('roomNo').value.trim(),
+    request: document.getElementById('requestType').value,
+    assignedStaff: document.getElementById('staffName').value.trim(),
+    status: document.getElementById('status').value,
+  };
+
+  try {
+    const res = await fetch('/guestservice/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMessage(data.message || 'Failed to add request.');
+      return;
+    }
+
+    document.getElementById('addRequestDialog').close();
+    document.getElementById('addRequestForm').reset();
+    showMessage(data.message || 'Request added successfully!');
+    await loadAndRender();
+  } catch {
+    showMessage('Error adding request.');
   }
 }
 
-// Show temporary message
+async function handleUpdateSubmit(e) {
+  e.preventDefault();
+
+  const id = Number(document.getElementById('updateRequestDbId').value);
+  const requestId = document.getElementById('updateRequestId').value.trim();
+
+  if (!requestId) {
+    showMessage('Please enter a valid Request ID.');
+    return;
+  }
+
+  const payload = {
+    id,
+    requestId,
+    guestRoom: document.getElementById('updateRoomNo').value.trim(),
+    request: document.getElementById('updateRequestType').value,
+    assignedStaff: document.getElementById('updateStaffName').value.trim(),
+    status: document.getElementById('updateStatus').value,
+  };
+
+  try {
+    const res = await fetch('/guestservice/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMessage(data.message || 'Failed to update request.');
+      return;
+    }
+
+    document.getElementById('updateRequestDialog').close();
+    document.getElementById('updateRequestForm').reset();
+    showMessage(data.message || 'Request updated successfully!');
+    await loadAndRender();
+  } catch {
+    showMessage('Error updating request.');
+  }
+}
+
+async function handleDelete(id, requestLabel) {
+  if (!confirm(`Are you sure you want to delete request ${requestLabel}?`)) return;
+
+  try {
+    const res = await fetch('/guestservice/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    showMessage(data.message || 'Request deleted successfully!');
+    await loadAndRender();
+  } catch {
+    showMessage('Error deleting request.');
+  }
+}
+
 function showMessage(message) {
   const messageEl = document.getElementById('requestMessage');
   messageEl.textContent = message;
@@ -252,9 +237,8 @@ function showMessage(message) {
   }, 3000);
 }
 
-// HTML escape utility
 function escapeHtml(text) {
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = text ?? '';
   return div.innerHTML;
 }

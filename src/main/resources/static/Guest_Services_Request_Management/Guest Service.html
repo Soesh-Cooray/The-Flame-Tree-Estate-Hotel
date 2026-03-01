@@ -57,7 +57,7 @@
             <thead>
               <tr>
                 <th>Request ID</th>
-                <th>Guest / Room</th>
+                <th>Room</th>
                 <th>Request</th>
                 <th>Assigned Staff</th>
                 <th>Status</th>
@@ -78,9 +78,6 @@
 
       <label for="requestId">Request ID</label>
       <input id="requestId" type="text" placeholder="e.g., GS-2026-021" required />
-
-      <label for="guestName">Guest Name</label>
-      <input id="guestName" type="text" placeholder="Guest full name" required />
 
       <label for="roomNo">Room Number</label>
       <input id="roomNo" type="text" placeholder="e.g., 204" required />
@@ -116,13 +113,10 @@
     <form class="form" id="updateRequestForm" method="dialog">
       <h3>Update Guest Service Request</h3>
 
-      <input id="updateRequestIndex" type="hidden" />
+      <input id="updateRequestDbId" type="hidden" />
 
       <label for="updateRequestId">Request ID</label>
       <input id="updateRequestId" type="text" required />
-
-      <label for="updateGuestName">Guest Name</label>
-      <input id="updateGuestName" type="text" required />
 
       <label for="updateRoomNo">Room Number</label>
       <input id="updateRoomNo" type="text" required />
