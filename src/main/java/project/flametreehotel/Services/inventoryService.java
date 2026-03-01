@@ -1,6 +1,7 @@
 package project.flametreehotel.Services;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,27 @@ public class inventoryService {
     private final inventoryRepository repository;
 
     public List<inventory> getAllItems() {
-        return repository.findAll();
+        List<inventory> items = repository.findAll();
+        boolean hasStatusChanges = false;
+
+        for (inventory item : items) {
+            String recalculatedStatus = computeStatus(
+                    item.getInStock(),
+                    item.getMinLevel(),
+                    item.getDamaged(),
+                    item.getMissing());
+
+            if (!Objects.equals(item.getStatus(), recalculatedStatus)) {
+                item.setStatus(recalculatedStatus);
+                hasStatusChanges = true;
+            }
+        }
+
+        if (hasStatusChanges) {
+            repository.saveAll(items);
+        }
+
+        return items;
     }
 
     public inventory addItem(String item, String category, int inStock, int minLevel) {
@@ -58,7 +79,9 @@ public class inventoryService {
     }
 
     private String computeStatus(int inStock, int minLevel, int damaged, int missing) {
-        if (inStock <= minLevel) {
+        int usableStock = Math.max(0, inStock - Math.max(0, damaged) - Math.max(0, missing));
+
+        if (usableStock <= minLevel) {
             return "Low Stock";
         }
         if (damaged > 0 || missing > 0) {
