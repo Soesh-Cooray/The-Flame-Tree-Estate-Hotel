@@ -22,6 +22,88 @@ async function apiPut(url, body) {
   return res.json();
 }
 
+function setMetric(id, value) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = String(value ?? 0);
+  }
+}
+
+function countByStatus(items, field, expected) {
+  return items.filter(item => String(item?.[field] || '').toLowerCase() === expected.toLowerCase()).length;
+}
+
+async function loadDashboardMetrics() {
+  try {
+    const [guestRes, housekeepingRes, inventoryRes, maintenanceRes, ordersRes] = await Promise.all([
+      fetch('/guestservice/list'),
+      fetch('/housekeeping/list'),
+      fetch('/inventory/list'),
+      fetch('/maintenance/list'),
+      fetch('/orders/list')
+    ]);
+
+    const guestRequests = guestRes.ok ? await guestRes.json() : [];
+    const housekeepingTasks = housekeepingRes.ok ? await housekeepingRes.json() : [];
+    const inventoryItems = inventoryRes.ok ? await inventoryRes.json() : [];
+    const maintenanceTickets = maintenanceRes.ok ? await maintenanceRes.json() : [];
+    const orders = ordersRes.ok ? await ordersRes.json() : [];
+
+    const guestAssigned = countByStatus(guestRequests, 'status', 'Assigned');
+    const guestInProgress = countByStatus(guestRequests, 'status', 'In Progress');
+    const guestCompleted = countByStatus(guestRequests, 'status', 'Completed');
+
+    setMetric('guestTotalMetric', guestRequests.length);
+    setMetric('guestAssignedMetric', guestAssigned);
+    setMetric('guestInProgressMetric', guestInProgress);
+    setMetric('guestCompletedMetric', guestCompleted);
+
+    const housekeepingAssigned = countByStatus(housekeepingTasks, 'taskStatus', 'Assigned');
+    const housekeepingInProgress = countByStatus(housekeepingTasks, 'taskStatus', 'In Progress');
+    const housekeepingCompleted = countByStatus(housekeepingTasks, 'taskStatus', 'Completed');
+
+    setMetric('housekeepingTotalMetric', housekeepingTasks.length);
+    setMetric('housekeepingAssignedMetric', housekeepingAssigned);
+    setMetric('housekeepingInProgressMetric', housekeepingInProgress);
+    setMetric('housekeepingCompletedMetric', housekeepingCompleted);
+
+    const inventoryLowStock = countByStatus(inventoryItems, 'status', 'Low Stock');
+    const inventoryDamaged = inventoryItems.reduce((sum, item) => sum + Number(item?.damaged || 0), 0);
+    const inventoryMissing = inventoryItems.reduce((sum, item) => sum + Number(item?.missing || 0), 0);
+
+    setMetric('inventoryTotalMetric', inventoryItems.length);
+    setMetric('inventoryLowStockMetric', inventoryLowStock);
+    setMetric('inventoryDamagedMetric', inventoryDamaged);
+    setMetric('inventoryMissingMetric', inventoryMissing);
+
+    const maintenanceOpen = countByStatus(maintenanceTickets, 'status', 'Open');
+    const maintenanceInProgress = countByStatus(maintenanceTickets, 'status', 'In Progress');
+    const maintenanceRepaired = countByStatus(maintenanceTickets, 'status', 'Repaired');
+    const maintenanceReplacement = countByStatus(maintenanceTickets, 'status', 'Replacement Needed');
+
+    setMetric('maintenanceOpenMetric', maintenanceOpen);
+    setMetric('maintenanceInProgressMetric', maintenanceInProgress);
+    setMetric('maintenanceRepairedMetric', maintenanceRepaired);
+    setMetric('maintenanceReplacementMetric', maintenanceReplacement);
+
+    const ordersPending = countByStatus(orders, 'status', 'Pending');
+    const ordersPartial = countByStatus(orders, 'status', 'Partial');
+    const ordersComplete = countByStatus(orders, 'status', 'Complete');
+
+    setMetric('ordersTotalMetric', orders.length);
+    setMetric('ordersPendingMetric', ordersPending);
+    setMetric('ordersPartialMetric', ordersPartial);
+    setMetric('ordersCompleteMetric', ordersComplete);
+
+    setMetric('overviewOpenGuestRequestsMetric', guestAssigned + guestInProgress);
+    setMetric('overviewPendingHousekeepingMetric', housekeepingAssigned + housekeepingInProgress);
+    setMetric('overviewLowInventoryMetric', inventoryLowStock);
+    setMetric('overviewOpenMaintenanceMetric', maintenanceOpen + maintenanceInProgress + maintenanceReplacement);
+  } catch (err) {
+    console.error('Could not load dashboard metrics', err);
+  }
+}
+
 // ── Load all users into datalist + table ─────────────────────────────────
 async function loadUsers() {
   try {
@@ -46,6 +128,7 @@ async function loadUsers() {
 }
 
 loadUsers();
+loadDashboardMetrics();
 
 // ── Create User Account ──────────────────────────────────────────────────
 document.getElementById('createUserForm').addEventListener('submit', async (e) => {
