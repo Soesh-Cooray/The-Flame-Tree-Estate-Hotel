@@ -78,12 +78,15 @@ public class inventoryService {
         repository.deleteById(id);
     }
 
-    private String computeStatus(int inStock, int minLevel, int damaged, int missing) {
-        int usableStock = Math.max(0, inStock - Math.max(0, damaged) - Math.max(0, missing));
+    private static final int LOW_STOCK_BUFFER = 10;
 
-        if (usableStock <= minLevel) {
-            return "Low Stock";
-        }
+    private String computeStatus(int inStock, int minLevel, int damaged, int missing) {
+    int usableStock = Math.max(0, inStock - Math.max(0, damaged) - Math.max(0, missing));
+    int lowStockThreshold = Math.max(0, minLevel) + LOW_STOCK_BUFFER;
+
+    if (usableStock <= lowStockThreshold) {
+        return "Low Stock";
+    }
         if (damaged > 0 || missing > 0) {
             return "Monitor";
         }
