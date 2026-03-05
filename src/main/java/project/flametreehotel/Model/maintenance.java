@@ -17,4 +17,6 @@ public class maintenance {
     private String assignedTo;
 
     private String status;
+
+    private boolean approved;
 }

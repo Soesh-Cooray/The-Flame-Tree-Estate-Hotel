@@ -29,6 +29,7 @@ public class maintenanceService {
         newTicket.setIssue(issue);
         newTicket.setAssignedTo(assignedTo);
         newTicket.setStatus(status);
+        newTicket.setApproved(false);
 
         return repository.save(newTicket);
     }
@@ -42,7 +43,20 @@ public class maintenanceService {
         existing.setIssue(issue);
         existing.setAssignedTo(assignedTo);
         existing.setStatus(status);
+        existing.setApproved(false);
 
+        return repository.save(existing);
+    }
+
+    public maintenance setApproval(int id, boolean approved) {
+        maintenance existing = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket not found."));
+
+        if (!"Repaired".equalsIgnoreCase(existing.getStatus())) {
+            throw new RuntimeException("Only repaired tickets can be approved.");
+        }
+
+        existing.setApproved(approved);
         return repository.save(existing);
     }
 

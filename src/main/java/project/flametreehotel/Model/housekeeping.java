@@ -25,4 +25,6 @@ public class housekeeping {
     private String assignedStaff;
 
     private String taskStatus;
+
+    private boolean approved;
 }
