@@ -33,6 +33,10 @@ function statusClass(status) {
   return 'open';
 }
 
+function approvalLabel(approved) {
+  return approved ? 'Approved' : 'Not Approved';
+}
+
 function renderMetrics(tickets) {
   openIssuesMetric.textContent = String(tickets.filter((t) => t.status === 'Open').length).padStart(2, '0');
   inProgressMetric.textContent = String(tickets.filter((t) => t.status === 'In Progress').length).padStart(2, '0');
@@ -45,7 +49,7 @@ function renderTable(tickets) {
 
   if (tickets.length === 0) {
     const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = '<td colspan="6">No tickets found. Add your first maintenance ticket.</td>';
+    emptyRow.innerHTML = '<td colspan="7">No tickets found. Add your first maintenance ticket.</td>';
     maintenanceTableBody.appendChild(emptyRow);
     return;
   }
@@ -60,6 +64,7 @@ function renderTable(tickets) {
       <td>${ticket.issue}</td>
       <td>${ticket.assignedTo}</td>
       <td><span class="tag ${tagClass}">${ticket.status}</span></td>
+      <td><span class="tag ${ticket.approved ? 'open' : 'replacement'}">${approvalLabel(Boolean(ticket.approved))}</span></td>
       <td>
         <div class="row-actions">
           <button type="button" class="small-btn" data-action="edit" data-id="${ticket.id}">Update</button>

@@ -145,6 +145,8 @@
         const data = await response.json();
 
         if (data.success) {
+          localStorage.setItem('currentUserRole', role);
+          localStorage.setItem('currentUsername', username);
           const route = roleRoutes[role];
           if (route) {
             window.location.href = route;

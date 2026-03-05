@@ -36,6 +36,10 @@ function statusFromTask(status) {
   return statusMap[status] || 'assigned';
 }
 
+function approvalLabel(approved) {
+  return approved ? 'Approved' : 'Not Approved';
+}
+
 function renderTable(tasks) {
   const tbody = document.getElementById('tasksTableBody');
   tbody.innerHTML = '';
@@ -43,7 +47,7 @@ function renderTable(tasks) {
   if (tasks.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
           No housekeeping tasks recorded. Click "Add Task" to create one.
         </td>
       </tr>
@@ -60,6 +64,7 @@ function renderTable(tasks) {
       <td>${escapeHtml(task.requestType)}</td>
       <td>${escapeHtml(task.assignedStaff)}</td>
       <td><span class="tag ${statusClass}">${escapeHtml(task.taskStatus)}</span></td>
+      <td><span class="tag ${task.approved ? 'done' : 'assigned'}">${approvalLabel(Boolean(task.approved))}</span></td>
       <td>
         <div class="action-buttons">
           <button type="button" class="edit-btn" data-action="edit" data-id="${task.id}">Edit</button>
