@@ -33,6 +33,74 @@ function countByStatus(items, field, expected) {
   return items.filter(item => String(item?.[field] || '').toLowerCase() === expected.toLowerCase()).length;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const currentRole = localStorage.getItem('currentUserRole') || 'Manager';
+
+async function loadApprovalTables() {
+  try {
+    const [housekeepingRes, maintenanceRes] = await Promise.all([
+      fetch('/housekeeping/list'),
+      fetch('/maintenance/list')
+    ]);
+
+    const housekeepingTasks = housekeepingRes.ok ? await housekeepingRes.json() : [];
+    const maintenanceTickets = maintenanceRes.ok ? await maintenanceRes.json() : [];
+
+    const housekeepingBody = document.getElementById('housekeepingApprovalTableBody');
+    if (housekeepingBody) {
+      const completedTasks = housekeepingTasks.filter((task) => String(task.taskStatus).toLowerCase() === 'completed');
+      housekeepingBody.innerHTML = completedTasks.length
+        ? completedTasks.map((task) => `
+          <tr>
+            <td>${escapeHtml(task.requestId)}</td>
+            <td>${escapeHtml(task.room)}</td>
+            <td>${escapeHtml(task.taskStatus)}</td>
+            <td><span class="status-pill ${task.approved ? 'active' : 'inactive'}">${task.approved ? 'Approved' : 'Not Approved'}</span></td>
+            <td><button type="button" class="approve-btn" data-module="housekeeping" data-id="${task.id}" data-approved="${task.approved ? 'false' : 'true'}">${task.approved ? 'Unapprove' : 'Approve'}</button></td>
+          </tr>
+        `).join('')
+        : '<tr><td colspan="5">No completed housekeeping tasks pending approval.</td></tr>';
+    }
+
+    const maintenanceBody = document.getElementById('maintenanceApprovalTableBody');
+    if (maintenanceBody) {
+      const repairedTickets = maintenanceTickets.filter((ticket) => String(ticket.status).toLowerCase() === 'repaired');
+      maintenanceBody.innerHTML = repairedTickets.length
+        ? repairedTickets.map((ticket) => `
+          <tr>
+            <td>${escapeHtml(ticket.ticket)}</td>
+            <td>${escapeHtml(ticket.location)}</td>
+            <td>${escapeHtml(ticket.status)}</td>
+            <td><span class="status-pill ${ticket.approved ? 'active' : 'inactive'}">${ticket.approved ? 'Approved' : 'Not Approved'}</span></td>
+            <td><button type="button" class="approve-btn" data-module="maintenance" data-id="${ticket.id}" data-approved="${ticket.approved ? 'false' : 'true'}">${ticket.approved ? 'Unapprove' : 'Approve'}</button></td>
+          </tr>
+        `).join('')
+        : '<tr><td colspan="5">No repaired maintenance tickets pending approval.</td></tr>';
+    }
+  } catch (err) {
+    console.error('Could not load approval tables', err);
+  }
+}
+
+async function updateApproval(moduleName, id, approved) {
+  const url = moduleName === 'housekeeping' ? '/housekeeping/approve' : '/maintenance/approve';
+  const data = await apiPost(url, { id, approved, role: currentRole });
+  if (!data.success) {
+    alert(data.message || 'Approval update failed.');
+    return;
+  }
+
+  await Promise.all([loadDashboardMetrics(), loadApprovalTables()]);
+}
+
 async function loadDashboardMetrics() {
   try {
     const [guestRes, housekeepingRes, inventoryRes, maintenanceRes, ordersRes] = await Promise.all([
@@ -129,6 +197,7 @@ async function loadUsers() {
 
 loadUsers();
 loadDashboardMetrics();
+loadApprovalTables();
 
 // ── Create User Account ──────────────────────────────────────────────────
 document.getElementById('createUserForm').addEventListener('submit', async (e) => {
@@ -192,3 +261,15 @@ async function setAccountStatus(active) {
 
 document.getElementById('deactivateBtn').addEventListener('click', () => setAccountStatus(false));
 document.getElementById('activateBtn').addEventListener('click', () => setAccountStatus(true));
+
+document.addEventListener('click', async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || !target.classList.contains('approve-btn')) return;
+
+  const moduleName = target.dataset.module;
+  const id = Number(target.dataset.id);
+  const approved = String(target.dataset.approved) === 'true';
+
+  if (!moduleName || Number.isNaN(id)) return;
+  await updateApproval(moduleName, id, approved);
+});

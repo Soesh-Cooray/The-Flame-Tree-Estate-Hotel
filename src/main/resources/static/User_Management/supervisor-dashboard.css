@@ -150,6 +150,100 @@ body {
   color: var(--tone-gold);
 }
 
+.panel-sub {
+  margin-top: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.panel-sub h3 {
+  margin: 0 0 14px;
+  color: var(--tone-gold);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93rem;
+}
+
+.user-table thead tr {
+  border-bottom: 1px solid var(--stroke);
+}
+
+.user-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.user-table td {
+  padding: 10px 12px;
+  color: var(--text-main);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.user-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.status-pill.active {
+  background: rgba(159, 224, 185, 0.15);
+  color: #9fe0b9;
+  border: 1px solid rgba(159, 224, 185, 0.3);
+}
+
+.status-pill.inactive {
+  background: rgba(255, 95, 95, 0.15);
+  color: #ff8080;
+  border: 1px solid rgba(255, 95, 95, 0.3);
+}
+
+.approve-btn {
+  border: 1px solid rgba(200, 146, 255, 0.38);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--tone-cream);
+  background: linear-gradient(120deg, rgba(228, 114, 184, 0.36), rgba(200, 146, 255, 0.36));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+
+.approve-btn:hover {
+  border-color: rgba(200, 146, 255, 0.7);
+  background: linear-gradient(120deg, rgba(228, 114, 184, 0.58), rgba(200, 146, 255, 0.58));
+}
+
+.approve-btn:active {
+  transform: translateY(1px);
+}
+
 .summary-section {
   display: grid;
   grid-template-columns: 1fr auto;

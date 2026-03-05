@@ -34,100 +34,88 @@
       <section class="panel" id="overview">
         <h2>Hotel Operations Overview</h2>
         <div class="kpi-grid">
-          <article class="kpi"><h3>Open Guest Requests</h3><p>14</p></article>
-          <article class="kpi"><h3>Rooms Pending Housekeeping</h3><p>09</p></article>
-          <article class="kpi"><h3>Low Inventory Items</h3><p>06</p></article>
-          <article class="kpi"><h3>Open Maintenance Tickets</h3><p>07</p></article>
+          <article class="kpi"><h3>Open Guest Requests</h3><p id="overviewOpenGuestRequestsMetric">0</p></article>
+          <article class="kpi"><h3>Rooms Pending Housekeeping</h3><p id="overviewPendingHousekeepingMetric">0</p></article>
+          <article class="kpi"><h3>Low Inventory Items</h3><p id="overviewLowInventoryMetric">0</p></article>
+          <article class="kpi"><h3>Open Maintenance Tickets</h3><p id="overviewOpenMaintenanceMetric">0</p></article>
         </div>
       </section>
 
       <section class="panel" id="guest-services">
-        <h2>Guest Service Activities</h2>
-        <div class="summary-section">
-          <div class="summary-stats">
-            <h3>Request Summary</h3>
-            <ul>
-              <li>In Progress: 4</li>
-              <li>Assigned: 5</li>
-              <li>Completed: 5</li>
-            </ul>
-          </div>
-          <div class="summary-section-action">
-            <a class="module-link" href="../Guest_Services_Request_Management/Guest Service.html">Open Guest Services Module</a>
-          </div>
+        <h2>Guest Service Functions</h2>
+        <div class="kpi-grid">
+          <article class="kpi"><h3>Total Requests</h3><p id="guestTotalMetric">0</p></article>
+          <article class="kpi"><h3>Assigned</h3><p id="guestAssignedMetric">0</p></article>
+          <article class="kpi"><h3>In Progress</h3><p id="guestInProgressMetric">0</p></article>
+          <article class="kpi"><h3>Completed</h3><p id="guestCompletedMetric">0</p></article>
         </div>
+        <a class="module-link" href="../Guest_Services_Request_Management/Guest Service.html">Open Guest Services Module</a>
       </section>
 
       <section class="panel" id="housekeeping">
-        <h2>Housekeeping Activities</h2>
-        <div class="summary-section">
-          <div class="summary-stats">
-            <h3>Task Summary</h3>
-            <ul>
-              <li>In Progress: 6</li>
-              <li>Assigned: 8</li>
-              <li>Completed: 12</li>
-            </ul>
-          </div>
-          <div class="summary-section-action">
-            <a class="module-link" href="../Room_&_Housekeeping_Management/housekeeping.html">Open Housekeeping Module</a>
-          </div>
+        <h2>Housekeeping Functions</h2>
+        <div class="kpi-grid">
+          <article class="kpi"><h3>Total Tasks</h3><p id="housekeepingTotalMetric">0</p></article>
+          <article class="kpi"><h3>Assigned</h3><p id="housekeepingAssignedMetric">0</p></article>
+          <article class="kpi"><h3>In Progress</h3><p id="housekeepingInProgressMetric">0</p></article>
+          <article class="kpi"><h3>Completed</h3><p id="housekeepingCompletedMetric">0</p></article>
+        </div>
+        <a class="module-link" href="../Room_&amp;_Housekeeping_Management/housekeeping.html">Open Housekeeping Module</a>
+        <div class="panel-sub">
+          <h3>Completed Housekeeping Approvals</h3>
+          <table class="user-table">
+            <thead>
+              <tr><th>Request ID</th><th>Room</th><th>Status</th><th>Approved</th><th>Action</th></tr>
+            </thead>
+            <tbody id="housekeepingApprovalTableBody"></tbody>
+          </table>
         </div>
       </section>
 
       <section class="panel" id="inventory">
-        <h2>Inventory Activities</h2>
-        <div class="summary-section">
-          <div class="summary-stats">
-            <h3>Stock Status</h3>
-            <ul>
-              <li>Healthy Stock: 28 items</li>
-              <li>Low Stock: 6 items</li>
-              <li>Damaged: 2 items</li>
-              <li>Missing: 1 item</li>
-            </ul>
-          </div>
-          <div class="summary-section-action">
-            <a class="module-link" href="../Inventory_Management/Inventory.html">Open Inventory Module</a>
-          </div>
+        <h2>Inventory / Store Functions</h2>
+        <div class="kpi-grid">
+          <article class="kpi"><h3>Total Items</h3><p id="inventoryTotalMetric">0</p></article>
+          <article class="kpi"><h3>Low Stock</h3><p id="inventoryLowStockMetric">0</p></article>
+          <article class="kpi"><h3>Damaged</h3><p id="inventoryDamagedMetric">0</p></article>
+          <article class="kpi"><h3>Missing</h3><p id="inventoryMissingMetric">0</p></article>
         </div>
+        <a class="module-link" href="../Inventory_Management/Inventory.html">Open Inventory Module</a>
       </section>
 
       <section class="panel" id="maintenance">
-        <h2>Maintenance Activities</h2>
-        <div class="summary-section">
-          <div class="summary-stats">
-            <h3>Ticket Status</h3>
-            <ul>
-              <li>Open Issues: 12</li>
-              <li>In Progress: 7</li>
-              <li>Repaired: 18</li>
-              <li>Replacement Needed: 3</li>
-            </ul>
-          </div>
-          <div class="summary-section-action">
-            <a class="module-link" href="../Maintenance_and_Damaged_Item_Tracking/Maintenance.html">Open Maintenance Module</a>
-          </div>
+        <h2>Maintenance Functions</h2>
+        <div class="kpi-grid">
+          <article class="kpi"><h3>Open Issues</h3><p id="maintenanceOpenMetric">0</p></article>
+          <article class="kpi"><h3>In Progress</h3><p id="maintenanceInProgressMetric">0</p></article>
+          <article class="kpi"><h3>Repaired</h3><p id="maintenanceRepairedMetric">0</p></article>
+          <article class="kpi"><h3>Replacement Needed</h3><p id="maintenanceReplacementMetric">0</p></article>
+        </div>
+        <a class="module-link" href="../Maintenance_and_Damaged_Item_Tracking/Maintenance.html">Open Maintenance Module</a>
+        <div class="panel-sub">
+          <h3>Repaired Maintenance Approvals</h3>
+          <table class="user-table">
+            <thead>
+              <tr><th>Ticket</th><th>Location</th><th>Status</th><th>Approved</th><th>Action</th></tr>
+            </thead>
+            <tbody id="maintenanceApprovalTableBody"></tbody>
+          </table>
         </div>
       </section>
 
       <section class="panel" id="suppliers">
-        <h2>Supplier & Purchase Activities</h2>
-        <div class="summary-section">
-          <div class="summary-stats">
-            <h3>Purchase Order Summary</h3>
-            <ul>
-              <li>Pending Delivery: 8</li>
-              <li>Partial Deliveries: 3</li>
-              <li>Complete: 15</li>
-            </ul>
-          </div>
-          <div class="summary-section-action">
-            <a class="module-link" href="../Supplier_&_Purchase_Management/Supplier.html">Open Supplier Module</a>
-          </div>
+        <h2>Supplier &amp; Purchase Functions</h2>
+        <div class="kpi-grid">
+          <article class="kpi"><h3>Total POs</h3><p id="ordersTotalMetric">0</p></article>
+          <article class="kpi"><h3>Pending</h3><p id="ordersPendingMetric">0</p></article>
+          <article class="kpi"><h3>Partial</h3><p id="ordersPartialMetric">0</p></article>
+          <article class="kpi"><h3>Complete</h3><p id="ordersCompleteMetric">0</p></article>
         </div>
+        <a class="module-link" href="../Supplier_&amp;_Purchase_Management/Supplier.html">Open Supplier Module</a>
       </section>
     </main>
   </div>
+
+  <script src="supervisor-dashboard.js"></script>
 </body>
 </html>

@@ -318,6 +318,29 @@ button.danger {
   border: 1px solid rgba(255, 95, 95, 0.3);
 }
 
+.approve-btn {
+  border: 1px solid rgba(200, 146, 255, 0.38);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--tone-cream);
+  background: linear-gradient(120deg, rgba(228, 114, 184, 0.36), rgba(200, 146, 255, 0.36));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+
+.approve-btn:hover {
+  border-color: rgba(200, 146, 255, 0.7);
+  background: linear-gradient(120deg, rgba(228, 114, 184, 0.58), rgba(200, 146, 255, 0.58));
+}
+
+.approve-btn:active {
+  transform: translateY(1px);
+}
+
 .form-msg {
   margin: 0;
   font-size: 0.88rem;
