@@ -30,9 +30,9 @@
             <p>All service requests recorded in the system.</p>
           </article>
           <article class="summary-card">
-            <h3>Assigned</h3>
-            <p class="metric" id="assignedMetric">0</p>
-            <p>Requests awaiting staff completion.</p>
+            <h3>Pending</h3>
+            <p class="metric" id="pendingMetric">0</p>
+            <p>New requests waiting to be worked on.</p>
           </article>
           <article class="summary-card">
             <h3>In Progress</h3>
@@ -57,9 +57,9 @@
             <thead>
               <tr>
                 <th>Request ID</th>
-                <th>Room</th>
+                <th>Room Name</th>
                 <th>Request</th>
-                <th>Assigned Staff</th>
+                <th>Date/Time of Request</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -77,10 +77,21 @@
       <h3>Add Guest Service Request</h3>
 
       <label for="requestId">Request ID</label>
-      <input id="requestId" type="text" placeholder="e.g., GS-2026-021" required />
+      <input id="requestId" type="text" readonly required />
 
-      <label for="roomNo">Room Number</label>
-      <input id="roomNo" type="text" placeholder="e.g., 204" required />
+      <label for="roomName">Room Name</label>
+      <select id="roomName" required>
+        <option value="">Choose room</option>
+        <option>The Loving Leopards (Penthouse)</option>
+        <option>The Curious Chameleon (Treehouse)</option>
+        <option>Dancing Elephant (Deluxe)</option>
+        <option>Cordial Crocodile (Deluxe)</option>
+        <option>Hanging Monkey (Deluxe)</option>
+        <option>Flying Squirrel (Deluxe)</option>
+        <option>Mindful Mongoose (Heritage)</option>
+        <option>Singing Civet (Heritage)</option>
+        <option>Amorous Porcupine (Heritage)</option>
+      </select>
 
       <label for="requestType">Request Type</label>
       <select id="requestType" required>
@@ -92,15 +103,11 @@
         <option>Other</option>
       </select>
 
-      <label for="staffName">Assign To Staff</label>
-      <input id="staffName" type="text" placeholder="Staff name" required />
+      <label for="customRequest">Other Request (Optional)</label>
+      <input id="customRequest" type="text" placeholder="Type custom request if needed" />
 
       <label for="status">Status</label>
-      <select id="status" required>
-        <option>Assigned</option>
-        <option>In Progress</option>
-        <option>Completed</option>
-      </select>
+      <input id="status" type="text" value="Pending" readonly />
 
       <div class="dialog-actions">
         <button type="button" class="secondary-btn" id="cancelAddDialogBtn">Cancel</button>
@@ -118,8 +125,19 @@
       <label for="updateRequestId">Request ID</label>
       <input id="updateRequestId" type="text" required />
 
-      <label for="updateRoomNo">Room Number</label>
-      <input id="updateRoomNo" type="text" required />
+      <label for="updateRoomName">Room Name</label>
+      <select id="updateRoomName" required>
+        <option value="">Choose room</option>
+        <option>The Loving Leopards (Penthouse)</option>
+        <option>The Curious Chameleon (Treehouse)</option>
+        <option>Dancing Elephant (Deluxe)</option>
+        <option>Cordial Crocodile (Deluxe)</option>
+        <option>Hanging Monkey (Deluxe)</option>
+        <option>Flying Squirrel (Deluxe)</option>
+        <option>Mindful Mongoose (Heritage)</option>
+        <option>Singing Civet (Heritage)</option>
+        <option>Amorous Porcupine (Heritage)</option>
+      </select>
 
       <label for="updateRequestType">Request Type</label>
       <select id="updateRequestType" required>
@@ -131,15 +149,11 @@
         <option>Other</option>
       </select>
 
-      <label for="updateStaffName">Assigned Staff</label>
-      <input id="updateStaffName" type="text" required />
+      <label for="updateCustomRequest">Other Request (Optional)</label>
+      <input id="updateCustomRequest" type="text" placeholder="Type custom request if needed" />
 
       <label for="updateStatus">Status</label>
-      <select id="updateStatus" required>
-        <option>Assigned</option>
-        <option>In Progress</option>
-        <option>Completed</option>
-      </select>
+      <input id="updateStatus" type="text" readonly />
 
       <div class="dialog-actions">
         <button type="button" class="secondary-btn" id="cancelUpdateDialogBtn">Cancel</button>

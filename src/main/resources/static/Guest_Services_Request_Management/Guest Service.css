@@ -164,7 +164,7 @@ th {
   font-weight: 700;
 }
 
-.tag.assigned {
+.tag.pending {
   background: rgba(248, 195, 101, 0.2);
   color: #ffd68a;
 }
@@ -261,6 +261,11 @@ th {
 .request-dialog select {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(228, 114, 184, 0.3);
+}
+
+.request-dialog input[readonly] {
+  background: rgba(255, 255, 255, 0.16);
+  cursor: not-allowed;
 }
 
 .request-dialog input:focus,

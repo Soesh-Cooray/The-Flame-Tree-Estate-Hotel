@@ -22,18 +22,18 @@ async function loadAndRender() {
 
 function renderMetrics(requests) {
   document.getElementById('totalRequestsMetric').textContent = requests.length;
-  document.getElementById('assignedMetric').textContent = requests.filter((r) => r.status === 'Assigned').length;
+  document.getElementById('pendingMetric').textContent = requests.filter((r) => r.status === 'Pending').length;
   document.getElementById('inProgressMetric').textContent = requests.filter((r) => r.status === 'In Progress').length;
   document.getElementById('completedMetric').textContent = requests.filter((r) => r.status === 'Completed').length;
 }
 
 function statusFromRequest(status) {
   const statusMap = {
-    'Assigned': 'assigned',
+    'Pending': 'pending',
     'In Progress': 'in-progress',
     'Completed': 'completed',
   };
-  return statusMap[status] || 'assigned';
+  return statusMap[status] || 'pending';
 }
 
 function renderTable(requests) {
@@ -56,9 +56,9 @@ function renderTable(requests) {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${escapeHtml(req.requestId)}</td>
-      <td>${escapeHtml(req.guestRoom)}</td>
+      <td>${escapeHtml(req.roomName)}</td>
       <td>${escapeHtml(req.request)}</td>
-      <td>${escapeHtml(req.assignedStaff)}</td>
+      <td>${formatDateTime(req.requestDateTime)}</td>
       <td><span class="tag ${statusClass}">${escapeHtml(req.status)}</span></td>
       <td>
         <div class="action-buttons">
@@ -102,7 +102,20 @@ function attachEventListeners() {
 
 function openAddDialog() {
   document.getElementById('addRequestForm').reset();
+  document.getElementById('status').value = 'Pending';
+  fetchNextRequestId();
   document.getElementById('addRequestDialog').showModal();
+}
+
+async function fetchNextRequestId() {
+  try {
+    const res = await fetch('/guestservice/next-request-id');
+    if (!res.ok) throw new Error('Could not generate next Request ID.');
+    const data = await res.json();
+    document.getElementById('requestId').value = data.requestId || '';
+  } catch {
+    showMessage('Error generating Request ID. Please try again.');
+  }
 }
 
 async function openUpdateDialog(id) {
@@ -118,9 +131,10 @@ async function openUpdateDialog(id) {
 
     document.getElementById('updateRequestDbId').value = String(req.id);
     document.getElementById('updateRequestId').value = req.requestId;
-    document.getElementById('updateRoomNo').value = req.guestRoom;
-    document.getElementById('updateRequestType').value = req.request;
-    document.getElementById('updateStaffName').value = req.assignedStaff;
+    document.getElementById('updateRoomName').value = req.roomName;
+    const requestType = detectRequestType(req.request);
+    document.getElementById('updateRequestType').value = requestType;
+    document.getElementById('updateCustomRequest').value = requestType === 'Other' ? req.request : '';
     document.getElementById('updateStatus').value = req.status;
 
     document.getElementById('updateRequestDialog').showModal();
@@ -134,16 +148,24 @@ async function handleAddSubmit(e) {
 
   const requestId = document.getElementById('requestId').value.trim();
   if (!requestId) {
-    showMessage('Please enter a valid Request ID.');
+    showMessage('Request ID could not be generated. Please try again.');
+    return;
+  }
+
+  const request = resolveRequestType(
+    document.getElementById('requestType').value,
+    document.getElementById('customRequest').value
+  );
+
+  if (!request) {
+    showMessage('Please select a request type or enter a custom request.');
     return;
   }
 
   const payload = {
     requestId,
-    guestRoom: document.getElementById('roomNo').value.trim(),
-    request: document.getElementById('requestType').value,
-    assignedStaff: document.getElementById('staffName').value.trim(),
-    status: document.getElementById('status').value,
+    roomName: document.getElementById('roomName').value,
+    request,
   };
 
   try {
@@ -179,13 +201,21 @@ async function handleUpdateSubmit(e) {
     return;
   }
 
+  const request = resolveRequestType(
+    document.getElementById('updateRequestType').value,
+    document.getElementById('updateCustomRequest').value
+  );
+
+  if (!request) {
+    showMessage('Please select a request type or enter a custom request.');
+    return;
+  }
+
   const payload = {
     id,
     requestId,
-    guestRoom: document.getElementById('updateRoomNo').value.trim(),
-    request: document.getElementById('updateRequestType').value,
-    assignedStaff: document.getElementById('updateStaffName').value.trim(),
-    status: document.getElementById('updateStatus').value,
+    roomName: document.getElementById('updateRoomName').value,
+    request,
   };
 
   try {
@@ -241,4 +271,39 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text ?? '';
   return div.innerHTML;
+}
+
+function resolveRequestType(selectedType, customType) {
+  const selected = (selectedType || '').trim();
+  const custom = (customType || '').trim();
+
+  if (custom) {
+    return custom;
+  }
+  if (!selected) {
+    return '';
+  }
+  if (selected === 'Other') {
+    return '';
+  }
+  return selected;
+}
+
+function detectRequestType(requestText) {
+  const builtInTypes = ['Room Assistance', 'Extra Towels', 'Toiletries Refill', 'Cleaning Follow-up'];
+  if (builtInTypes.includes(requestText)) {
+    return requestText;
+  }
+  return 'Other';
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return escapeHtml(value);
+  }
+  return escapeHtml(date.toLocaleString());
 }
