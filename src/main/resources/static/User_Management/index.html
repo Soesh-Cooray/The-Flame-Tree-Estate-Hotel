@@ -25,46 +25,12 @@
     <main class="card">
       <header class="card__header">
         <div class="eyebrow">Staff Portal</div>
-        <h2>Choose your role, then sign in</h2>
+        <h2>Sign in to continue</h2>
         <p class="hint">Access is limited to authorized personnel of The Flame Tree Estate Hotel.</p>
         <p class="role-note" id="roleNote" aria-live="polite"></p>
       </header>
 
       <form class="form" id="loginForm" action="#" method="post">
-        <fieldset class="fieldset">
-          <legend>Who are you?</legend>
-          <div class="role-grid">
-            <label class="role-option">
-              <input type="radio" name="role" value="Manager" required />
-              <span>Manager</span>
-            </label>
-            <label class="role-option">
-              <input type="radio" name="role" value="Housekeeping Staff" />
-              <span>Housekeeping Staff</span>
-            </label>
-            <label class="role-option">
-              <input type="radio" name="role" value="Inventory/Store Manager" />
-              <span>Inventory / Store Manager</span>
-            </label>
-            <label class="role-option">
-              <input type="radio" name="role" value="Maintenance Staff" />
-              <span>Maintenance Staff</span>
-            </label>
-            <label class="role-option">
-              <input type="radio" name="role" value="Staff Supervisor" />
-              <span>Staff Supervisor</span>
-            </label>
-            <label class="role-option">
-              <input type="radio" name="role" value="Front Desk / Reception Staff" />
-              <span>Front Desk / Reception Staff</span>
-            </label>
-            <label class="role-option">
-              <input type="radio" name="role" value="Supplier &amp; Purchase Management" />
-              <span>Supplier &amp; Purchase Management</span>
-            </label>
-          </div>
-        </fieldset>
-
         <div class="field">
           <label for="username">Username</label>
           <input id="username" name="username" type="text" autocomplete="username" required placeholder="your.name" />
@@ -94,12 +60,8 @@
 
   <script>
     const loginForm = document.getElementById('loginForm');
-    const roleInputs = document.querySelectorAll('input[name="role"]');
     const roleNote = document.getElementById('roleNote');
     const submitBtn = loginForm.querySelector('button[type="submit"]');
-
-    const managerMessage = 'Manager access includes user account creation, role assignment, account deactivation, and secure role-based access control.';
-    const nonManagerMessage = 'You selected a non-manager role. Please continue sign-in to access your assigned area.';
 
     const roleRoutes = {
       'Manager': 'manager-dashboard.html',
@@ -111,26 +73,11 @@
       'Supplier & Purchase Management': '../Supplier_&_Purchase_Management/Supplier.html'
     };
 
-    roleInputs.forEach((input) => {
-      input.addEventListener('change', () => {
-        roleNote.textContent = input.value === 'Manager' ? managerMessage : nonManagerMessage;
-        roleNote.style.color = '';
-      });
-    });
-
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const selectedRole = document.querySelector('input[name="role"]:checked');
-
-      if (!selectedRole) {
-        roleNote.textContent = 'Please select a role to continue.';
-        roleNote.style.color = '#c0392b';
-        return;
-      }
 
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
-      const role = selectedRole.value;
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Signing in...';
@@ -139,12 +86,13 @@
         const response = await fetch('/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, role })
+          body: JSON.stringify({ username, password })
         });
 
         const data = await response.json();
 
         if (data.success) {
+          const role = data.role;
           localStorage.setItem('currentUserRole', role);
           localStorage.setItem('currentUsername', username);
           const route = roleRoutes[role];

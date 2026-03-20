@@ -1,15 +1,20 @@
 package project.flametreehotel.Controllers;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import project.flametreehotel.Model.users;
 import project.flametreehotel.Services.authService;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -20,30 +25,30 @@ public class authController {
 
     /**
      * POST /auth/login
-     * Body: { "username": "...", "password": "...", "role": "..." }
-     * Returns { "success": true } or { "success": false, "message": "..." }
+     * Body: { "username": "...", "password": "..." }
+     * Returns { "success": true, "role": "..." } or { "success": false, "message": "..." }
      */
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> body) {
         Map<String, Object> response = new HashMap<>();
         String username = body.get("username");
         String password = body.get("password");
-        String role = body.get("role");
 
-        if (username == null || password == null || role == null) {
+        if (username == null || password == null) {
             response.put("success", false);
-            response.put("message", "Username, password, and role are required.");
+            response.put("message", "Username and password are required.");
             return ResponseEntity.badRequest().body(response);
         }
 
-        users user = service.login(username, password, role);
+        users user = service.login(username, password);
         if (user == null) {
             response.put("success", false);
-            response.put("message", "Invalid credentials, incorrect role, or account is inactive.");
+            response.put("message", "Invalid credentials or account is inactive.");
             return ResponseEntity.status(401).body(response);
         }
 
         response.put("success", true);
+        response.put("role", user.getRole());
         return ResponseEntity.ok(response);
     }
 

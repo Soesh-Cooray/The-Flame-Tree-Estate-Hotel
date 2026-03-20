@@ -1,12 +1,12 @@
 package project.flametreehotel.Services;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import project.flametreehotel.Model.users;
 import project.flametreehotel.Repository.authRepository;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -16,14 +16,13 @@ public class authService {
 
     /**
      * Validates login credentials.
-     * Returns null if username not found, account inactive, wrong password, or role mismatch.
+     * Returns null if username not found, account inactive, or wrong password.
      */
-    public users login(String username, String password, String role) {
+    public users login(String username, String password) {
         users user = repository.findByUsername(username);
         if (user == null) return null;
         if (!user.isStatus()) return null;
         if (!user.getPassword().equals(password)) return null;
-        if (!user.getRole().equals(role)) return null;
         return user;
     }
 
