@@ -31,30 +31,32 @@ public class guestserviceController {
         return ResponseEntity.ok(service.getAllRequests());
     }
 
+    @GetMapping("/next-request-id")
+    public ResponseEntity<Map<String, String>> nextRequestId() {
+        return ResponseEntity.ok(Map.of("requestId", service.generateNextRequestId()));
+    }
+
     /**
      * POST /guestservice/add
-     * Body: { "requestId": "...", "guestRoom": "...", "request": "...", "assignedStaff": "...", "status": "..." }
+     * Body: { "requestId": "...", "roomName": "...", "request": "..." }
      */
     @PostMapping("/add")
     public ResponseEntity<Map<String, Object>> addGuestService(@RequestBody Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
 
         String requestId = (String) body.get("requestId");
-        String guestRoom = (String) body.get("guestRoom");
+        String roomName = (String) body.get("roomName");
         String request = (String) body.get("request");
-        String assignedStaff = (String) body.get("assignedStaff");
-        String status = (String) body.get("status");
 
-        if (requestId == null || requestId.isBlank() || guestRoom == null || guestRoom.isBlank()
-                || request == null || request.isBlank() || assignedStaff == null || assignedStaff.isBlank()
-                || status == null || status.isBlank()) {
+        if (requestId == null || requestId.isBlank() || roomName == null || roomName.isBlank()
+                || request == null || request.isBlank()) {
             response.put("success", false);
             response.put("message", "All fields are required.");
             return ResponseEntity.badRequest().body(response);
         }
 
         try {
-            guest created = service.addRequest(requestId.trim(), guestRoom.trim(), request.trim(), assignedStaff.trim(), status);
+            guest created = service.addRequest(requestId.trim(), roomName.trim(), request.trim());
             response.put("success", true);
             response.put("message", "Added request " + created.getRequestId() + ".");
             response.put("request", created);
@@ -68,7 +70,7 @@ public class guestserviceController {
 
     /**
      * POST /guestservice/update
-     * Body: { "id": 1, "requestId": "...", "guestRoom": "...", "request": "...", "assignedStaff": "...", "status": "..." }
+     * Body: { "id": 1, "requestId": "...", "roomName": "...", "request": "..." }
      */
     @PostMapping("/update")
     public ResponseEntity<Map<String, Object>> updateGuestService(@RequestBody Map<String, Object> body) {
@@ -82,21 +84,18 @@ public class guestserviceController {
 
         int id = ((Number) body.get("id")).intValue();
         String requestId = (String) body.get("requestId");
-        String guestRoom = (String) body.get("guestRoom");
+        String roomName = (String) body.get("roomName");
         String request = (String) body.get("request");
-        String assignedStaff = (String) body.get("assignedStaff");
-        String status = (String) body.get("status");
 
-        if (requestId == null || requestId.isBlank() || guestRoom == null || guestRoom.isBlank()
-                || request == null || request.isBlank() || assignedStaff == null || assignedStaff.isBlank()
-                || status == null || status.isBlank()) {
+        if (requestId == null || requestId.isBlank() || roomName == null || roomName.isBlank()
+                || request == null || request.isBlank()) {
             response.put("success", false);
             response.put("message", "All fields are required.");
             return ResponseEntity.badRequest().body(response);
         }
 
         try {
-            guest updated = service.updateRequest(id, requestId.trim(), guestRoom.trim(), request.trim(), assignedStaff.trim(), status);
+            guest updated = service.updateRequest(id, requestId.trim(), roomName.trim(), request.trim());
             response.put("success", true);
             response.put("message", "Updated request " + updated.getRequestId() + ".");
             response.put("request", updated);

@@ -1,5 +1,8 @@
 package project.flametreehotel.Model;
 
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import lombok.Data;
@@ -11,9 +14,10 @@ public class guest {
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
     private int id;
     private String requestId;
-    private String guestRoom;
+    @Column(name = "guestRoom")
+    private String roomName;
     private String request;
-    private String assignedStaff;
     private String status;
+    private LocalDateTime requestDateTime;
 
 }
