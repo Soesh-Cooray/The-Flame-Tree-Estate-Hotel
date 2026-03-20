@@ -13,6 +13,7 @@ import project.flametreehotel.Repository.housekeepingRepository;
 public class housekeepingService {
 
     private final housekeepingRepository repository;
+    private final guestService guestService;
 
     public List<housekeeping> getAllTasks() {
         return repository.findAll();
@@ -29,6 +30,22 @@ public class housekeepingService {
         task.setRequestType(requestType);
         task.setAssignedStaff(assignedStaff);
         task.setTaskStatus(taskStatus);
+        task.setApproved(false);
+
+        return repository.save(task);
+    }
+
+    public housekeeping addTaskFromGuestRequest(String requestId, String room, String requestType) {
+        if (repository.findByRequestId(requestId).isPresent()) {
+            throw new RuntimeException("This guest request has already been sent to housekeeping.");
+        }
+
+        housekeeping task = new housekeeping();
+        task.setRequestId(requestId);
+        task.setRoom(room);
+        task.setRequestType(requestType);
+        task.setAssignedStaff("Unassigned");
+        task.setTaskStatus("Assigned");
         task.setApproved(false);
 
         return repository.save(task);
@@ -57,7 +74,15 @@ public class housekeepingService {
         }
 
         existing.setApproved(approved);
-        return repository.save(existing);
+        housekeeping saved = repository.save(existing);
+
+        if (approved) {
+            guestService.updateStatusByRequestId(saved.getRequestId(), "Completed");
+        } else {
+            guestService.updateStatusByRequestId(saved.getRequestId(), "In Progress");
+        }
+
+        return saved;
     }
 
     public void deleteTask(int id) {

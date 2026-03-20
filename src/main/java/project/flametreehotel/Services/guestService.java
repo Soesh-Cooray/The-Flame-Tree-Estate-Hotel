@@ -2,6 +2,7 @@ package project.flametreehotel.Services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,6 +22,17 @@ public class guestService {
 
     public List<guest> getAllRequests() {
         return repository.findAll();
+    }
+
+    public List<guest> getPendingRoutingRequests() {
+        return repository.findByStatusIgnoreCase("Pending").stream()
+                .filter(req -> req.getRoutedModule() == null || req.getRoutedModule().isBlank())
+                .toList();
+    }
+
+    public guest getByRequestId(String requestId) {
+        return repository.findByRequestId(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found."));
     }
 
     public String generateNextRequestId() {
@@ -44,6 +56,7 @@ public class guestService {
         newRequest.setRequest(request);
         newRequest.setStatus("Pending");
         newRequest.setRequestDateTime(LocalDateTime.now());
+        newRequest.setRoutedModule("");
 
         return repository.save(newRequest);
     }
@@ -62,6 +75,24 @@ public class guestService {
         existing.setRoomName(roomName);
         existing.setRequest(request);
 
+        return repository.save(existing);
+    }
+
+    public guest markRouted(String requestId, String moduleName) {
+        guest existing = getByRequestId(requestId);
+
+        if (!(existing.getRoutedModule() == null || existing.getRoutedModule().isBlank())) {
+            throw new RuntimeException("Request has already been routed to " + existing.getRoutedModule() + ".");
+        }
+
+        existing.setRoutedModule(normalizeModule(moduleName));
+        existing.setStatus("In Progress");
+        return repository.save(existing);
+    }
+
+    public guest updateStatusByRequestId(String requestId, String status) {
+        guest existing = getByRequestId(requestId);
+        existing.setStatus(status);
         return repository.save(existing);
     }
 
@@ -85,5 +116,16 @@ public class guestService {
         } catch (NumberFormatException ex) {
             return 0;
         }
+    }
+
+    private String normalizeModule(String moduleName) {
+        String value = moduleName == null ? "" : moduleName.trim().toLowerCase(Locale.ROOT);
+        if ("housekeeping".equals(value)) {
+            return "Housekeeping";
+        }
+        if ("maintenance".equals(value)) {
+            return "Maintenance";
+        }
+        throw new RuntimeException("Invalid module. Use housekeeping or maintenance.");
     }
 }

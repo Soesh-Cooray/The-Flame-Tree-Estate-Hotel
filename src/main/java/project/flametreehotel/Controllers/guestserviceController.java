@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
 import project.flametreehotel.Model.guest;
 import project.flametreehotel.Services.guestService;
+import project.flametreehotel.Services.housekeepingService;
+import project.flametreehotel.Services.maintenanceService;
 
 @RestController
 @RequestMapping("/guestservice")
@@ -21,6 +23,8 @@ import project.flametreehotel.Services.guestService;
 public class guestserviceController {
 
     private final guestService service;
+    private final housekeepingService housekeepingService;
+    private final maintenanceService maintenanceService;
 
     /**
      * GET /guestservice/list
@@ -34,6 +38,63 @@ public class guestserviceController {
     @GetMapping("/next-request-id")
     public ResponseEntity<Map<String, String>> nextRequestId() {
         return ResponseEntity.ok(Map.of("requestId", service.generateNextRequestId()));
+    }
+
+    @GetMapping("/routing-pending")
+    public ResponseEntity<List<guest>> pendingRoutingRequests() {
+        return ResponseEntity.ok(service.getPendingRoutingRequests());
+    }
+
+    /**
+     * POST /guestservice/route
+     * Body: { "requestId": "REQ-001", "targetModule": "housekeeping|maintenance", "role": "Manager|Staff Supervisor" }
+     */
+    @PostMapping("/route")
+    public ResponseEntity<Map<String, Object>> routeGuestService(@RequestBody Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+
+        String requestId = String.valueOf(body.getOrDefault("requestId", "")).trim();
+        String targetModule = String.valueOf(body.getOrDefault("targetModule", "")).trim().toLowerCase();
+        String role = String.valueOf(body.getOrDefault("role", "")).trim();
+
+        boolean allowed = "Manager".equalsIgnoreCase(role) || "Staff Supervisor".equalsIgnoreCase(role);
+        if (!allowed) {
+            response.put("success", false);
+            response.put("message", "Only manager or supervisor can route guest requests.");
+            return ResponseEntity.status(403).body(response);
+        }
+
+        if (requestId.isBlank() || targetModule.isBlank()) {
+            response.put("success", false);
+            response.put("message", "requestId and targetModule are required.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        try {
+            guest request = service.getByRequestId(requestId);
+
+            switch (targetModule) {
+                case "housekeeping" -> housekeepingService.addTaskFromGuestRequest(
+                        request.getRequestId(), request.getRoomName(), request.getRequest());
+                case "maintenance" -> maintenanceService.addTicketFromGuestRequest(
+                        request.getRequestId(), request.getRoomName(), request.getRequest());
+                default -> {
+                    response.put("success", false);
+                    response.put("message", "Invalid targetModule. Use housekeeping or maintenance.");
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+
+            guest routed = service.markRouted(requestId, targetModule);
+            response.put("success", true);
+            response.put("message", "Request " + routed.getRequestId() + " routed to " + routed.getRoutedModule() + ".");
+            response.put("request", routed);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     /**

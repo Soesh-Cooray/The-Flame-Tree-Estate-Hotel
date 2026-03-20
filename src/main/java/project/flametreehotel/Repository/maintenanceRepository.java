@@ -8,4 +8,6 @@ import project.flametreehotel.Model.maintenance;
 
 public interface maintenanceRepository extends JpaRepository<maintenance, Integer> {
     Optional<maintenance> findByTicket(String ticket);
+
+    Optional<maintenance> findByGuestRequestId(String guestRequestId);
 }

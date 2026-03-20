@@ -13,6 +13,7 @@ import project.flametreehotel.Repository.maintenanceRepository;
 public class maintenanceService {
 
     private final maintenanceRepository repository;
+    private final guestService guestService;
 
     public List<maintenance> getAllTickets() {
         return repository.findAll();
@@ -32,6 +33,28 @@ public class maintenanceService {
         newTicket.setApproved(false);
 
         return repository.save(newTicket);
+    }
+
+    public maintenance addTicketFromGuestRequest(String guestRequestId, String location, String issue) {
+        if (repository.findByGuestRequestId(guestRequestId).isPresent()) {
+            throw new RuntimeException("This guest request has already been sent to maintenance.");
+        }
+
+        String ticketCode = "MT-" + guestRequestId;
+        if (repository.findByTicket(ticketCode).isPresent()) {
+            ticketCode = ticketCode + "-1";
+        }
+
+        maintenance ticket = new maintenance();
+        ticket.setTicket(ticketCode);
+        ticket.setLocation(location);
+        ticket.setIssue(issue);
+        ticket.setAssignedTo("Unassigned");
+        ticket.setStatus("Open");
+        ticket.setApproved(false);
+        ticket.setGuestRequestId(guestRequestId);
+
+        return repository.save(ticket);
     }
 
     public maintenance updateTicket(int id, String ticket, String location, String issue, String assignedTo, String status) {
@@ -57,7 +80,17 @@ public class maintenanceService {
         }
 
         existing.setApproved(approved);
-        return repository.save(existing);
+        maintenance saved = repository.save(existing);
+
+        if (saved.getGuestRequestId() != null && !saved.getGuestRequestId().isBlank()) {
+            if (approved) {
+                guestService.updateStatusByRequestId(saved.getGuestRequestId(), "Completed");
+            } else {
+                guestService.updateStatusByRequestId(saved.getGuestRequestId(), "In Progress");
+            }
+        }
+
+        return saved;
     }
 
     public void deleteTicket(int id) {

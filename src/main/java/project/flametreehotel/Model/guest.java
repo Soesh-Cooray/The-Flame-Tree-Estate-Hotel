@@ -19,5 +19,6 @@ public class guest {
     private String request;
     private String status;
     private LocalDateTime requestDateTime;
+    private String routedModule;
 
 }
