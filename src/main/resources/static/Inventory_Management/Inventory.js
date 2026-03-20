@@ -13,17 +13,74 @@ const missingMetric = document.getElementById('missingMetric');
 const inventoryMessage = document.getElementById('inventoryMessage');
 
 const itemNameInput = document.getElementById('itemName');
+const itemNameOtherInput = document.getElementById('itemNameOther');
+const itemNameOtherContainer = document.getElementById('itemNameOtherContainer');
 const categoryInput = document.getElementById('category');
 const openingQtyInput = document.getElementById('openingQty');
 const minLevelInput = document.getElementById('minLevel');
 
 const updateItemIdInput = document.getElementById('updateItemId');
 const updateItemNameInput = document.getElementById('updateItemName');
+const updateItemNameOtherInput = document.getElementById('updateItemNameOther');
+const updateItemNameOtherContainer = document.getElementById('updateItemNameOtherContainer');
 const updateCategoryInput = document.getElementById('updateCategory');
 const updateStockInput = document.getElementById('updateStock');
 const updateMinLevelInput = document.getElementById('updateMinLevel');
 const updateDamagedInput = document.getElementById('updateDamaged');
 const updateMissingInput = document.getElementById('updateMissing');
+
+const ITEM_CATEGORY_MAP = {
+  'Bath towels': 'Bathroom Essentials',
+  'Face towels': 'Bathroom Essentials',
+  'Bath mats': 'Bathroom Essentials',
+  'Toilet paper': 'Bathroom Essentials',
+  'Body wash': 'Basic toiletries',
+  'Shampoo': 'Basic toiletries',
+  'Conditioner': 'Basic toiletries',
+  'Hand wash': 'Basic toiletries',
+  'Pillows': 'Bedding & Comfort',
+  'Duvets': 'Bedding & Comfort',
+  'Duvet covers': 'Bedding & Comfort',
+  'Water bottles': 'Consumable items'
+};
+
+function normalizeItemName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isKnownItem(value) {
+  const normalized = normalizeItemName(value);
+  return Object.keys(ITEM_CATEGORY_MAP).some((item) => normalizeItemName(item) === normalized);
+}
+
+function resolveCategoryFromItem(value) {
+  const normalized = normalizeItemName(value);
+  const matchedKey = Object.keys(ITEM_CATEGORY_MAP).find((item) => normalizeItemName(item) === normalized);
+  return matchedKey ? ITEM_CATEGORY_MAP[matchedKey] : '';
+}
+
+function handleItemSelection(itemSelect, otherContainer, otherInput, categorySelect) {
+  const selected = itemSelect.value;
+  const isOther = selected === 'Other items';
+
+  otherContainer.style.display = isOther ? 'block' : 'none';
+  otherInput.required = isOther;
+
+  if (!isOther) {
+    otherInput.value = '';
+    const mappedCategory = resolveCategoryFromItem(selected);
+    if (mappedCategory) {
+      categorySelect.value = mappedCategory;
+    }
+  }
+}
+
+function getFinalItemName(itemSelect, otherInput) {
+  if (itemSelect.value === 'Other items') {
+    return otherInput.value.trim();
+  }
+  return itemSelect.value.trim();
+}
 
 function statusClass(status) {
   if (status === 'Low Stock') return 'low';
@@ -98,7 +155,19 @@ async function loadAndRender() {
 
 function openUpdateDialog(item) {
   updateItemIdInput.value = String(item.id);
-  updateItemNameInput.value = item.item;
+
+  if (isKnownItem(item.item)) {
+    updateItemNameInput.value = item.item;
+    updateItemNameOtherContainer.style.display = 'none';
+    updateItemNameOtherInput.required = false;
+    updateItemNameOtherInput.value = '';
+  } else {
+    updateItemNameInput.value = 'Other items';
+    updateItemNameOtherContainer.style.display = 'block';
+    updateItemNameOtherInput.required = true;
+    updateItemNameOtherInput.value = item.item;
+  }
+
   updateCategoryInput.value = item.category;
   updateStockInput.value = String(item.inStock);
   updateMinLevelInput.value = String(item.minLevel);
@@ -109,6 +178,8 @@ function openUpdateDialog(item) {
 
 openAddDialogBtn.addEventListener('click', () => {
   addItemForm.reset();
+  itemNameOtherContainer.style.display = 'none';
+  itemNameOtherInput.required = false;
   addItemDialog.showModal();
 });
 
@@ -118,6 +189,14 @@ cancelAddDialogBtn.addEventListener('click', () => {
 
 cancelUpdateDialogBtn.addEventListener('click', () => {
   updateItemDialog.close();
+});
+
+itemNameInput.addEventListener('change', () => {
+  handleItemSelection(itemNameInput, itemNameOtherContainer, itemNameOtherInput, categoryInput);
+});
+
+updateItemNameInput.addEventListener('change', () => {
+  handleItemSelection(updateItemNameInput, updateItemNameOtherContainer, updateItemNameOtherInput, updateCategoryInput);
 });
 
 inventoryTableBody.addEventListener('click', async (event) => {
@@ -171,7 +250,7 @@ inventoryTableBody.addEventListener('click', async (event) => {
 addItemForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const itemName = itemNameInput.value.trim();
+  const itemName = getFinalItemName(itemNameInput, itemNameOtherInput);
   if (!itemName) {
     showMessage('Please enter a valid item name.');
     return;
@@ -210,7 +289,7 @@ updateItemForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const id = Number(updateItemIdInput.value);
-  const itemName = updateItemNameInput.value.trim();
+  const itemName = getFinalItemName(updateItemNameInput, updateItemNameOtherInput);
 
   if (!itemName) {
     showMessage('Please enter a valid item name.');

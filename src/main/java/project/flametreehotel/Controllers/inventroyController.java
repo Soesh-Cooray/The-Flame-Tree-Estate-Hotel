@@ -133,4 +133,44 @@ public class inventroyController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+    /**
+     * GET /inventory/low-stock-pending
+     * Returns all low stock items awaiting manager approval.
+     */
+    @GetMapping("/low-stock-pending")
+    public ResponseEntity<List<inventory>> getLowStockPending() {
+        return ResponseEntity.ok(service.getLowStockPending());
+    }
+
+    /**
+     * POST /inventory/approve
+     * Body: { "id": 1 }
+     * Marks an item as approved and sets status to Pending.
+     */
+    @PostMapping("/approve")
+    public ResponseEntity<Map<String, Object>> approveItem(@RequestBody Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (body.get("id") == null) {
+            response.put("success", false);
+            response.put("message", "Item ID is required.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        int id = ((Number) body.get("id")).intValue();
+
+        try {
+            inventory approved = service.approveItem(id);
+            response.put("success", true);
+            response.put("message", "Approved " + approved.getItem() + " for reordering.");
+            response.put("item", approved);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 }
+

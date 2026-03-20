@@ -20,6 +20,11 @@ public class inventoryService {
         boolean hasStatusChanges = false;
 
         for (inventory item : items) {
+            // Don't recalculate status if it's "Pending" - preserve manual approval status
+            if ("Pending".equals(item.getStatus())) {
+                continue;
+            }
+
             String recalculatedStatus = computeStatus(
                     item.getInStock(),
                     item.getMinLevel(),
@@ -78,6 +83,20 @@ public class inventoryService {
             throw new RuntimeException("Item not found.");
         }
         repository.deleteById(id);
+    }
+
+    public List<inventory> getLowStockPending() {
+        List<inventory> items = repository.findAll();
+        return items.stream()
+                .filter(item -> "Low Stock".equals(item.getStatus()))
+                .toList();
+    }
+
+    public inventory approveItem(int id) {
+        inventory item = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item not found."));
+        item.setStatus("Pending");
+        return repository.save(item);
     }
 
     private static final int LOW_STOCK_BUFFER = 10;

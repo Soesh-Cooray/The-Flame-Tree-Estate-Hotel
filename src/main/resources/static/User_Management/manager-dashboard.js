@@ -46,13 +46,15 @@ const currentRole = localStorage.getItem('currentUserRole') || 'Manager';
 
 async function loadApprovalTables() {
   try {
-    const [housekeepingRes, maintenanceRes] = await Promise.all([
+    const [housekeepingRes, maintenanceRes, inventoryRes] = await Promise.all([
       fetch('/housekeeping/list'),
-      fetch('/maintenance/list')
+      fetch('/maintenance/list'),
+      fetch('/inventory/low-stock-pending')
     ]);
 
     const housekeepingTasks = housekeepingRes.ok ? await housekeepingRes.json() : [];
     const maintenanceTickets = maintenanceRes.ok ? await maintenanceRes.json() : [];
+    const inventoryItems = inventoryRes.ok ? await inventoryRes.json() : [];
 
     const housekeepingBody = document.getElementById('housekeepingApprovalTableBody');
     if (housekeepingBody) {
@@ -85,19 +87,51 @@ async function loadApprovalTables() {
         `).join('')
         : '<tr><td colspan="5">No repaired maintenance tickets pending approval.</td></tr>';
     }
+
+    const inventoryBody = document.getElementById('inventoryApprovalTableBody');
+    if (inventoryBody) {
+      inventoryBody.innerHTML = inventoryItems.length
+        ? inventoryItems.map((item) => `
+          <tr>
+            <td>${escapeHtml(item.item)}</td>
+            <td>${escapeHtml(item.category)}</td>
+            <td>${item.inStock}</td>
+            <td>${item.minLevel}</td>
+            <td><span class="status-pill watch">${escapeHtml(item.status)}</span></td>
+            <td><button type="button" class="approve-btn" data-module="inventory" data-id="${item.id}">Approve</button></td>
+          </tr>
+        `).join('')
+        : '<tr><td colspan="6">No low stock items awaiting approval.</td></tr>';
+    }
   } catch (err) {
     console.error('Could not load approval tables', err);
   }
 }
 
 async function updateApproval(moduleName, id, approved) {
-  const url = moduleName === 'housekeeping' ? '/housekeeping/approve' : '/maintenance/approve';
-  const data = await apiPost(url, { id, approved, role: currentRole });
+  let url;
+  if (moduleName === 'housekeeping') {
+    url = '/housekeeping/approve';
+  } else if (moduleName === 'maintenance') {
+    url = '/maintenance/approve';
+  } else if (moduleName === 'inventory') {
+    url = '/inventory/approve';
+  } else {
+    alert('Unknown module.');
+    return;
+  }
+
+  const body = moduleName === 'inventory' ? { id } : { id, approved, role: currentRole };
+  const data = await apiPost(url, body);
   if (!data.success) {
     alert(data.message || 'Approval update failed.');
     return;
   }
+  
+  loadApprovalTables();
+}
 
+async function initializeDashboard() {
   await Promise.all([loadDashboardMetrics(), loadApprovalTables()]);
 }
 
@@ -196,8 +230,7 @@ async function loadUsers() {
 }
 
 loadUsers();
-loadDashboardMetrics();
-loadApprovalTables();
+initializeDashboard();
 
 // ── Create User Account ──────────────────────────────────────────────────
 document.getElementById('createUserForm').addEventListener('submit', async (e) => {
