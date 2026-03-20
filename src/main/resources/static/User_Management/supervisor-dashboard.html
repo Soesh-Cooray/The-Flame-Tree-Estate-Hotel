@@ -45,11 +45,20 @@
         <h2>Guest Service Functions</h2>
         <div class="kpi-grid">
           <article class="kpi"><h3>Total Requests</h3><p id="guestTotalMetric">0</p></article>
-          <article class="kpi"><h3>Assigned</h3><p id="guestAssignedMetric">0</p></article>
+          <article class="kpi"><h3>Pending</h3><p id="guestPendingMetric">0</p></article>
           <article class="kpi"><h3>In Progress</h3><p id="guestInProgressMetric">0</p></article>
           <article class="kpi"><h3>Completed</h3><p id="guestCompletedMetric">0</p></article>
         </div>
         <a class="module-link" href="../Guest_Services_Request_Management/Guest Service.html">Open Guest Services Module</a>
+        <div class="panel-sub">
+          <h3>Guest Request Routing Approvals</h3>
+          <table class="user-table">
+            <thead>
+              <tr><th>Request ID</th><th>Room Name</th><th>Request</th><th>Date/Time</th><th>Route To</th></tr>
+            </thead>
+            <tbody id="guestRoutingTableBody"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="panel" id="housekeeping">
