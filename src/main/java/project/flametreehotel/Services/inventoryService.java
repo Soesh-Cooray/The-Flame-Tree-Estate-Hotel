@@ -60,6 +60,8 @@ public class inventoryService {
         inventory existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item not found."));
 
+        validateStockBreakdown(inStock, damaged, missing);
+
         existing.setItem(item);
         existing.setCategory(category);
         existing.setInStock(inStock);
@@ -79,6 +81,12 @@ public class inventoryService {
     }
 
     private static final int LOW_STOCK_BUFFER = 10;
+
+    private void validateStockBreakdown(int inStock, int damaged, int missing) {
+        if ((damaged + missing) > inStock) {
+            throw new RuntimeException("Damaged and missing totals cannot exceed the stock level.");
+        }
+    }
 
     private String computeStatus(int inStock, int minLevel, int damaged, int missing) {
     int usableStock = Math.max(0, inStock - Math.max(0, damaged) - Math.max(0, missing));

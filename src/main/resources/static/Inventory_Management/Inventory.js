@@ -81,6 +81,10 @@ function showMessage(message) {
   inventoryMessage.textContent = message;
 }
 
+function showPopup(message) {
+  window.alert(message);
+}
+
 async function loadAndRender() {
   try {
     const res = await fetch('/inventory/list');
@@ -223,6 +227,13 @@ updateItemForm.addEventListener('submit', async (event) => {
     missing: Math.max(0, Number(updateMissingInput.value || 0))
   };
 
+  if ((payload.damaged + payload.missing) > payload.inStock) {
+    const validationMessage = 'Damaged and missing totals cannot exceed the stock level.';
+    showMessage(validationMessage);
+    showPopup(validationMessage);
+    return;
+  }
+
   try {
     const res = await fetch('/inventory/update', {
       method: 'POST',
@@ -232,7 +243,11 @@ updateItemForm.addEventListener('submit', async (event) => {
     const data = await res.json();
 
     if (!data.success) {
-      showMessage(data.message || 'Failed to update item.');
+      const errorMessage = data.message || 'Failed to update item.';
+      showMessage(errorMessage);
+      if (errorMessage.includes('Damaged and missing totals cannot exceed the stock level.')) {
+        showPopup(errorMessage);
+      }
       return;
     }
 
