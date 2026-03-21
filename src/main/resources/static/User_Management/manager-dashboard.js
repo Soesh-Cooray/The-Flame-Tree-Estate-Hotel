@@ -197,12 +197,13 @@ async function loadDashboardMetrics() {
     setMetric('guestInProgressMetric', guestInProgress);
     setMetric('guestCompletedMetric', guestCompleted);
 
-    const housekeepingAssigned = countByStatus(housekeepingTasks, 'taskStatus', 'Assigned');
+    const housekeepingPending = countByStatus(housekeepingTasks, 'taskStatus', 'Pending')
+      + countByStatus(housekeepingTasks, 'taskStatus', 'Assigned');
     const housekeepingInProgress = countByStatus(housekeepingTasks, 'taskStatus', 'In Progress');
     const housekeepingCompleted = countByStatus(housekeepingTasks, 'taskStatus', 'Completed');
 
     setMetric('housekeepingTotalMetric', housekeepingTasks.length);
-    setMetric('housekeepingAssignedMetric', housekeepingAssigned);
+    setMetric('housekeepingPendingMetric', housekeepingPending);
     setMetric('housekeepingInProgressMetric', housekeepingInProgress);
     setMetric('housekeepingCompletedMetric', housekeepingCompleted);
 
@@ -215,15 +216,19 @@ async function loadDashboardMetrics() {
     setMetric('inventoryDamagedMetric', inventoryDamaged);
     setMetric('inventoryMissingMetric', inventoryMissing);
 
-    const maintenanceOpen = countByStatus(maintenanceTickets, 'status', 'Open');
+    const maintenancePending = countByStatus(maintenanceTickets, 'status', 'Pending')
+      + countByStatus(maintenanceTickets, 'status', 'Open');
     const maintenanceInProgress = countByStatus(maintenanceTickets, 'status', 'In Progress');
-    const maintenanceRepaired = countByStatus(maintenanceTickets, 'status', 'Repaired');
-    const maintenanceReplacement = countByStatus(maintenanceTickets, 'status', 'Replacement Needed');
+    const maintenanceCompleted = countByStatus(maintenanceTickets, 'status', 'Completed')
+      + countByStatus(maintenanceTickets, 'status', 'Repaired');
+    const maintenanceRejected = maintenanceTickets.filter(
+      (ticket) => String(ticket?.supervisorDecision || '').toLowerCase() === 'rejected'
+    ).length;
 
-    setMetric('maintenanceOpenMetric', maintenanceOpen);
+    setMetric('maintenancePendingMetric', maintenancePending);
     setMetric('maintenanceInProgressMetric', maintenanceInProgress);
-    setMetric('maintenanceRepairedMetric', maintenanceRepaired);
-    setMetric('maintenanceReplacementMetric', maintenanceReplacement);
+    setMetric('maintenanceCompletedMetric', maintenanceCompleted);
+    setMetric('maintenanceRejectedMetric', maintenanceRejected);
 
     const ordersPending = countByStatus(orders, 'status', 'Pending');
     const ordersPartial = countByStatus(orders, 'status', 'Partial');
@@ -235,9 +240,9 @@ async function loadDashboardMetrics() {
     setMetric('ordersCompleteMetric', ordersComplete);
 
     setMetric('overviewOpenGuestRequestsMetric', guestPending + guestInProgress);
-    setMetric('overviewPendingHousekeepingMetric', housekeepingAssigned + housekeepingInProgress);
+    setMetric('overviewPendingHousekeepingMetric', housekeepingPending + housekeepingInProgress);
     setMetric('overviewLowInventoryMetric', inventoryLowStock);
-    setMetric('overviewOpenMaintenanceMetric', maintenanceOpen + maintenanceInProgress + maintenanceReplacement);
+    setMetric('overviewOpenMaintenanceMetric', maintenancePending + maintenanceInProgress + maintenanceRejected);
   } catch (err) {
     console.error('Could not load dashboard metrics', err);
   }
