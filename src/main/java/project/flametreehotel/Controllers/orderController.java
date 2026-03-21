@@ -31,20 +31,25 @@ public class orderController {
         return ResponseEntity.ok(service.getAllOrders());
     }
 
+    @GetMapping("/next-po-id")
+    public ResponseEntity<Map<String, String>> nextPoId() {
+        return ResponseEntity.ok(Map.of("poid", service.generateNextPoId()));
+    }
+
     /**
      * POST /orders/add
-     * Body: { "poid": "...", "supplier": "...", "item": "...", "qty": 0, "status": "..." }
+     * Body: { "supplier": "...", "item": "...", "qty": 0, "status": "...", "notificationId": 1 }
      */
     @PostMapping("/add")
     public ResponseEntity<Map<String, Object>> addOrder(@RequestBody Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
 
-        String poid = (String) body.get("poid");
         String supplier = (String) body.get("supplier");
         String item = (String) body.get("item");
         String status = (String) body.get("status");
+        Integer notificationId = body.get("notificationId") != null ? ((Number) body.get("notificationId")).intValue() : null;
 
-        if (poid == null || poid.isBlank() || supplier == null || supplier.isBlank()
+        if (supplier == null || supplier.isBlank()
                 || item == null || item.isBlank() || status == null || status.isBlank()) {
             response.put("success", false);
             response.put("message", "All fields are required.");
@@ -59,7 +64,7 @@ public class orderController {
         }
 
         try {
-            orders created = service.addOrder(poid.trim(), supplier.trim(), item.trim(), qty, status);
+            orders created = service.addOrder(supplier.trim(), item.trim(), qty, status, notificationId);
             response.put("success", true);
             response.put("message", "Added purchase order " + created.getPoid() + ".");
             response.put("order", created);

@@ -3,8 +3,10 @@
  * CRUD operations backed by the /orders REST API
  */
 
+let selectedNotificationId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-  loadAndRender();
+  Promise.all([loadAndRender(), loadNotifications()]);
   attachEventListeners();
 });
 
@@ -71,8 +73,58 @@ function renderTable(pos) {
   });
 }
 
+async function loadNotifications() {
+  try {
+    const res = await fetch('/inventory/approved-low-stock-notifications');
+    if (!res.ok) throw new Error('Failed to load low stock notifications.');
+    const notifications = await res.json();
+    renderNotifications(notifications);
+  } catch (err) {
+    showMessage('Error loading low stock notifications: ' + err.message);
+  }
+}
+
+function renderNotifications(notifications) {
+  const badge = document.getElementById('lowStockNotificationBadge');
+  const tbody = document.getElementById('lowStockNotificationBody');
+
+  badge.textContent = String(notifications.length);
+  tbody.innerHTML = '';
+
+  if (notifications.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
+          No approved low stock alerts waiting for purchase orders.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  notifications.forEach((notification) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${escapeHtml(formatDateTime(notification.approvedAt))}</td>
+      <td>${escapeHtml(notification.itemName)}</td>
+      <td>${escapeHtml(notification.category)}</td>
+      <td>${Number(notification.inStock ?? 0)}</td>
+      <td>${Number(notification.minLevel ?? 0)}</td>
+      <td>${Number(notification.suggestedQty ?? 1)}</td>
+      <td>
+        <button type="button" class="notif-create-btn" data-action="create-po" data-notification-id="${notification.id}" data-item="${escapeHtml(notification.itemName)}" data-qty="${Number(notification.suggestedQty ?? 1)}">
+          Create PO
+        </button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
 function attachEventListeners() {
-  document.getElementById('openAddDialogBtn').addEventListener('click', openAddDialog);
+  document.getElementById('openAddDialogBtn').addEventListener('click', () => {
+    openAddDialog();
+  });
 
   document.getElementById('cancelAddDialogBtn').addEventListener('click', () => {
     document.getElementById('addPoDialog').close();
@@ -98,10 +150,50 @@ function attachEventListeners() {
       await handleDelete(id, poidLabel);
     }
   });
+
+  document.getElementById('lowStockNotificationBody').addEventListener('click', async (e) => {
+    const action = e.target.dataset.action;
+    if (action !== 'create-po') return;
+
+    const notificationId = Number(e.target.dataset.notificationId);
+    const item = e.target.dataset.item || '';
+    const qty = Number(e.target.dataset.qty || '1');
+
+    await openAddDialog({
+      notificationId,
+      item,
+      qty,
+      status: 'Pending',
+    });
+  });
 }
 
-function openAddDialog() {
+async function fetchNextPoId() {
+  const res = await fetch('/orders/next-po-id');
+  if (!res.ok) throw new Error('Failed to generate PO ID.');
+  const data = await res.json();
+  return data.poid || '';
+}
+
+async function openAddDialog(prefill = null) {
   document.getElementById('addPoForm').reset();
+  selectedNotificationId = null;
+
+  try {
+    const nextPoId = await fetchNextPoId();
+    document.getElementById('poId').value = nextPoId;
+  } catch {
+    showMessage('Could not generate PO ID. Please try again.');
+    return;
+  }
+
+  if (prefill) {
+    selectedNotificationId = prefill.notificationId || null;
+    document.getElementById('itemName').value = prefill.item || '';
+    document.getElementById('orderedQty').value = String(prefill.qty || 1);
+    document.getElementById('poStatus').value = prefill.status || 'Pending';
+  }
+
   document.getElementById('addPoDialog').showModal();
 }
 
@@ -144,6 +236,7 @@ async function handleAddSubmit(e) {
     item: document.getElementById('itemName').value.trim(),
     qty: parseInt(document.getElementById('orderedQty').value, 10),
     status: document.getElementById('poStatus').value,
+    notificationId: selectedNotificationId,
   };
 
   try {
@@ -161,8 +254,9 @@ async function handleAddSubmit(e) {
 
     document.getElementById('addPoDialog').close();
     document.getElementById('addPoForm').reset();
+    selectedNotificationId = null;
     showMessage(data.message || 'Purchase order added successfully!');
-    await loadAndRender();
+    await Promise.all([loadAndRender(), loadNotifications()]);
   } catch {
     showMessage('Error adding purchase order.');
   }
@@ -208,6 +302,13 @@ async function handleUpdateSubmit(e) {
   } catch {
     showMessage('Error updating purchase order.');
   }
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
 }
 
 async function handleDelete(id, poidLabel) {
