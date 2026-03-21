@@ -80,8 +80,19 @@
       <label for="requestId">Request ID</label>
       <input id="requestId" type="text" placeholder="e.g., HKP-001" readonly required />
 
-      <label for="roomNo">Room Number</label>
-      <input id="roomNo" type="text" placeholder="e.g., 305" required />
+      <label for="roomNo">Room Name</label>
+      <select id="roomNo" required>
+        <option value="">Choose room</option>
+        <option>The Loving Leopards (Penthouse)</option>
+        <option>The Curious Chameleon (Treehouse)</option>
+        <option>Dancing Elephant (Deluxe)</option>
+        <option>Cordial Crocodile (Deluxe)</option>
+        <option>Hanging Monkey (Deluxe)</option>
+        <option>Flying Squirrel (Deluxe)</option>
+        <option>Mindful Mongoose (Heritage)</option>
+        <option>Singing Civet (Heritage)</option>
+        <option>Amorous Porcupine (Heritage)</option>
+      </select>
 
       <label for="requestType">Request Type</label>
       <select id="requestType" required>
@@ -94,7 +105,9 @@
       </select>
 
       <label for="staffName">Assigned Staff</label>
-      <input id="staffName" type="text" placeholder="Housekeeping staff name" required />
+      <select id="staffName" required>
+        <option value="">Select housekeeping staff</option>
+      </select>
 
       <label for="taskStatus">Task Status</label>
       <select id="taskStatus" required>

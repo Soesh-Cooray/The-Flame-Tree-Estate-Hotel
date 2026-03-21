@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
   attachEventListeners();
 });
 
+let housekeepingStaffOptions = [];
+
 async function loadAndRender() {
   try {
     const res = await fetch('/housekeeping/list');
@@ -108,8 +110,53 @@ function attachEventListeners() {
 
 async function openAddDialog() {
   document.getElementById('addTaskForm').reset();
+  await loadHousekeepingStaffOptions();
   await fetchNextHousekeepingTaskId();
   document.getElementById('addTaskDialog').showModal();
+}
+
+function normalizeRole(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;');
+}
+
+async function loadHousekeepingStaffOptions() {
+  const select = document.getElementById('staffName');
+  if (!(select instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/auth/users');
+    if (!res.ok) {
+      throw new Error('Failed to load users.');
+    }
+
+    const users = await res.json();
+    const staff = (Array.isArray(users) ? users : [])
+      .filter((user) => Boolean(user?.status))
+      .filter((user) => normalizeRole(user?.role).includes('housekeeping'))
+      .map((user) => String(user?.username || '').trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    housekeepingStaffOptions = [...new Set(staff)];
+  } catch {
+    housekeepingStaffOptions = [];
+  }
+
+  if (!housekeepingStaffOptions.length) {
+    select.innerHTML = '<option value="">No active housekeeping staff found</option>';
+    return;
+  }
+
+  select.innerHTML = `
+    <option value="">Select housekeeping staff</option>
+    ${housekeepingStaffOptions.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('')}
+  `;
 }
 
 async function fetchNextHousekeepingTaskId() {
@@ -175,11 +222,21 @@ async function handleAddSubmit(e) {
 
   const payload = {
     requestId,
-    room: document.getElementById('roomNo').value.trim(),
+    room: document.getElementById('roomNo').value,
     requestType: document.getElementById('requestType').value,
-    assignedStaff: document.getElementById('staffName').value.trim(),
+    assignedStaff: document.getElementById('staffName').value,
     taskStatus: document.getElementById('taskStatus').value,
   };
+
+  if (!payload.room) {
+    showMessage('Please select a room.');
+    return;
+  }
+
+  if (!payload.assignedStaff) {
+    showMessage('Please select a housekeeping staff member.');
+    return;
+  }
 
   try {
     const res = await fetch('/housekeeping/add', {
