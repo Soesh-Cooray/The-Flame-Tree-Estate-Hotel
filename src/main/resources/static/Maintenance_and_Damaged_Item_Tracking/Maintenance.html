@@ -78,16 +78,29 @@
       <h3>Add Maintenance Ticket</h3>
 
       <label for="ticketId">Ticket ID</label>
-      <input id="ticketId" type="text" placeholder="e.g., MT-2026-014" required />
+      <input id="ticketId" type="text" placeholder="e.g., MCE-001" readonly required />
 
       <label for="location">Room / Location</label>
-      <input id="location" type="text" placeholder="e.g., Room 104, Lobby" required />
+      <select id="location" required>
+        <option value="">Choose room</option>
+        <option>The Loving Leopards (Penthouse)</option>
+        <option>The Curious Chameleon (Treehouse)</option>
+        <option>Dancing Elephant (Deluxe)</option>
+        <option>Cordial Crocodile (Deluxe)</option>
+        <option>Hanging Monkey (Deluxe)</option>
+        <option>Flying Squirrel (Deluxe)</option>
+        <option>Mindful Mongoose (Heritage)</option>
+        <option>Singing Civet (Heritage)</option>
+        <option>Amorous Porcupine (Heritage)</option>
+      </select>
 
       <label for="issue">Issue</label>
       <input id="issue" type="text" placeholder="e.g., AC not cooling" required />
 
       <label for="assignedTo">Assign To</label>
-      <input id="assignedTo" type="text" placeholder="Technician name" required />
+      <select id="assignedTo" required>
+        <option value="">Select maintenance staff</option>
+      </select>
 
       <label for="status">Status</label>
       <select id="status" required>
@@ -114,13 +127,26 @@
       <input id="updateTicketId" type="text" required />
 
       <label for="updateLocation">Room / Location</label>
-      <input id="updateLocation" type="text" required />
+      <select id="updateLocation" required>
+        <option value="">Choose room</option>
+        <option>The Loving Leopards (Penthouse)</option>
+        <option>The Curious Chameleon (Treehouse)</option>
+        <option>Dancing Elephant (Deluxe)</option>
+        <option>Cordial Crocodile (Deluxe)</option>
+        <option>Hanging Monkey (Deluxe)</option>
+        <option>Flying Squirrel (Deluxe)</option>
+        <option>Mindful Mongoose (Heritage)</option>
+        <option>Singing Civet (Heritage)</option>
+        <option>Amorous Porcupine (Heritage)</option>
+      </select>
 
       <label for="updateIssue">Issue</label>
       <input id="updateIssue" type="text" required />
 
       <label for="updateAssignedTo">Assign To</label>
-      <input id="updateAssignedTo" type="text" required />
+      <select id="updateAssignedTo" required>
+        <option value="">Select maintenance staff</option>
+      </select>
 
       <label for="updateStatus">Status</label>
       <select id="updateStatus" required>

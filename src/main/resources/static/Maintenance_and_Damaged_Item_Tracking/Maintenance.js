@@ -27,6 +27,8 @@ const updateIssueInput = document.getElementById('updateIssue');
 const updateAssignedToInput = document.getElementById('updateAssignedTo');
 const updateStatusInput = document.getElementById('updateStatus');
 
+let maintenanceStaffOptions = [];
+
 function statusClass(status) {
   if (status === 'Pending') return 'open';
   if (status === 'In Progress') return 'in-progress';
@@ -89,6 +91,95 @@ function showMessage(message) {
   maintenanceMessage.textContent = message;
 }
 
+function normalizeRole(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;');
+}
+
+function ensureOptionExists(selectEl, value) {
+  if (!(selectEl instanceof HTMLSelectElement)) return;
+
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return;
+
+  const exists = Array.from(selectEl.options).some((option) => option.value === normalized || option.text === normalized);
+  if (exists) return;
+
+  const option = document.createElement('option');
+  option.value = normalized;
+  option.textContent = normalized;
+  selectEl.appendChild(option);
+}
+
+async function loadMaintenanceStaffOptions() {
+  if (!(assignedToInput instanceof HTMLSelectElement) || !(updateAssignedToInput instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/auth/users');
+    if (!res.ok) {
+      throw new Error('Failed to load users.');
+    }
+
+    const users = await res.json();
+    const staff = (Array.isArray(users) ? users : [])
+      .filter((user) => Boolean(user?.status))
+      .filter((user) => normalizeRole(user?.role).includes('maintenance'))
+      .map((user) => String(user?.username || '').trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    maintenanceStaffOptions = [...new Set(staff)];
+  } catch {
+    maintenanceStaffOptions = [];
+  }
+
+  if (!maintenanceStaffOptions.length) {
+    assignedToInput.innerHTML = '<option value="">No active maintenance staff found</option>';
+    updateAssignedToInput.innerHTML = '<option value="">No active maintenance staff found</option>';
+    return;
+  }
+
+  const optionsHtml = maintenanceStaffOptions.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('');
+
+  assignedToInput.innerHTML = `
+    <option value="">Select maintenance staff</option>
+    ${optionsHtml}
+  `;
+
+  updateAssignedToInput.innerHTML = `
+    <option value="">Select maintenance staff</option>
+    ${optionsHtml}
+  `;
+}
+
+async function fetchNextMaintenanceTicketId() {
+  try {
+    const res = await fetch('/maintenance/next-ticket-id');
+    if (!res.ok) {
+      throw new Error('Could not generate next maintenance ticket ID.');
+    }
+
+    const data = await res.json();
+    ticketIdInput.value = data.ticket || '';
+  } catch {
+    showMessage('Error generating maintenance ticket ID. Please try again.');
+  }
+}
+
 async function loadAndRender() {
   try {
     const res = await fetch('/maintenance/list');
@@ -103,15 +194,19 @@ async function loadAndRender() {
 function openUpdateDialog(ticket) {
   updateTicketDbIdInput.value = String(ticket.id);
   updateTicketIdInput.value = ticket.ticket;
+  ensureOptionExists(updateLocationInput, ticket.location);
   updateLocationInput.value = ticket.location;
   updateIssueInput.value = ticket.issue;
+  ensureOptionExists(updateAssignedToInput, ticket.assignedTo);
   updateAssignedToInput.value = ticket.assignedTo;
   updateStatusInput.value = ticket.status;
   updateTicketDialog.showModal();
 }
 
-openAddDialogBtn.addEventListener('click', () => {
+openAddDialogBtn.addEventListener('click', async () => {
   addTicketForm.reset();
+  await loadMaintenanceStaffOptions();
+  await fetchNextMaintenanceTicketId();
   addTicketDialog.showModal();
 });
 
@@ -128,15 +223,25 @@ addTicketForm.addEventListener('submit', async (event) => {
 
   const ticketId = ticketIdInput.value.trim();
   if (!ticketId) {
-    showMessage('Please enter a valid ticket ID.');
+    showMessage('Could not generate ticket ID. Please try again.');
+    return;
+  }
+
+  if (!locationInput.value) {
+    showMessage('Please select a room.');
+    return;
+  }
+
+  if (!assignedToInput.value) {
+    showMessage('Please select a maintenance staff member.');
     return;
   }
 
   const payload = {
     ticket: ticketId,
-    location: locationInput.value.trim(),
+    location: locationInput.value,
     issue: issueInput.value.trim(),
-    assignedTo: assignedToInput.value.trim(),
+    assignedTo: assignedToInput.value,
     status: statusInput.value
   };
 
@@ -173,12 +278,22 @@ updateTicketForm.addEventListener('submit', async (event) => {
     return;
   }
 
+  if (!updateLocationInput.value) {
+    showMessage('Please select a room.');
+    return;
+  }
+
+  if (!updateAssignedToInput.value) {
+    showMessage('Please select a maintenance staff member.');
+    return;
+  }
+
   const payload = {
     id,
     ticket: ticketId,
-    location: updateLocationInput.value.trim(),
+    location: updateLocationInput.value,
     issue: updateIssueInput.value.trim(),
-    assignedTo: updateAssignedToInput.value.trim(),
+    assignedTo: updateAssignedToInput.value,
     status: updateStatusInput.value
   };
 
@@ -221,6 +336,7 @@ maintenanceTableBody.addEventListener('click', async (event) => {
       const tickets = await res.json();
       const ticket = tickets.find((t) => t.id === id);
       if (ticket) {
+        await loadMaintenanceStaffOptions();
         openUpdateDialog(ticket);
       } else {
         showMessage('Selected ticket not found.');
@@ -251,4 +367,5 @@ maintenanceTableBody.addEventListener('click', async (event) => {
   }
 });
 
+loadMaintenanceStaffOptions();
 loadAndRender();
