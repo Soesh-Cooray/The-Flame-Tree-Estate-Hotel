@@ -1,6 +1,8 @@
 package project.flametreehotel.Services;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import project.flametreehotel.Repository.maintenanceRepository;
 @RequiredArgsConstructor
 public class maintenanceService {
 
+    private static final Pattern MCE_ID_PATTERN = Pattern.compile("MCE-(\\d+)");
     private static final String STATUS_PENDING = "Pending";
     private static final String STATUS_IN_PROGRESS = "In Progress";
     private static final String STATUS_COMPLETED = "Completed";
@@ -24,6 +27,16 @@ public class maintenanceService {
 
     public List<maintenance> getAllTickets() {
         return repository.findAll();
+    }
+
+    public String generateNextMaintenanceTicketId() {
+        int max = repository.findAll().stream()
+                .map(maintenance::getTicket)
+                .mapToInt(this::extractMceSequence)
+                .max()
+                .orElse(0);
+
+        return String.format("MCE-%03d", max + 1);
     }
 
     public maintenance addTicket(String ticket, String location, String issue, String assignedTo, String status) {
@@ -144,6 +157,9 @@ public class maintenanceService {
 
     private String normalizeStatus(String status) {
         String value = status == null ? "" : status.trim();
+        if (value.equalsIgnoreCase("Assigned")) {
+            return STATUS_PENDING;
+        }
         if (value.equalsIgnoreCase("Open")) {
             return STATUS_PENDING;
         }
@@ -175,6 +191,23 @@ public class maintenanceService {
 
     private boolean isGuestRequest(String requestId) {
         return requestId != null && requestId.trim().toUpperCase().startsWith("REQ-");
+    }
+
+    private int extractMceSequence(String ticketCode) {
+        if (ticketCode == null) {
+            return 0;
+        }
+
+        Matcher matcher = MCE_ID_PATTERN.matcher(ticketCode.trim().toUpperCase());
+        if (!matcher.matches()) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
     }
 
     public void deleteTicket(int id) {
