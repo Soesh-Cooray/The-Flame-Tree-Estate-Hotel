@@ -22,13 +22,14 @@ async function loadAndRender() {
 
 function renderMetrics(tasks) {
   document.getElementById('totalTasksMetric').textContent = tasks.length;
-  document.getElementById('assignedMetric').textContent = tasks.filter((t) => t.taskStatus === 'Assigned').length;
+  document.getElementById('assignedMetric').textContent = tasks.filter((t) => t.taskStatus === 'Pending' || t.taskStatus === 'Assigned').length;
   document.getElementById('inProgressMetric').textContent = tasks.filter((t) => t.taskStatus === 'In Progress').length;
   document.getElementById('completedMetric').textContent = tasks.filter((t) => t.taskStatus === 'Completed').length;
 }
 
 function statusFromTask(status) {
   const statusMap = {
+    'Pending': 'assigned',
     'Assigned': 'assigned',
     'In Progress': 'clean',
     'Completed': 'completed',
@@ -64,7 +65,7 @@ function renderTable(tasks) {
       <td>${escapeHtml(task.requestType)}</td>
       <td>${escapeHtml(task.assignedStaff)}</td>
       <td><span class="tag ${statusClass}">${escapeHtml(task.taskStatus)}</span></td>
-      <td><span class="tag ${task.approved ? 'done' : 'assigned'}">${approvalLabel(Boolean(task.approved))}</span></td>
+      <td><span class="tag ${task.approved ? 'done' : 'assigned'}">${escapeHtml(task.supervisorDecision || approvalLabel(Boolean(task.approved)))}</span></td>
       <td>
         <div class="action-buttons">
           <button type="button" class="edit-btn" data-action="edit" data-id="${task.id}">Edit</button>
@@ -124,7 +125,9 @@ async function openUpdateDialog(id) {
     document.getElementById('updateTaskDbId').value = String(task.id);
     document.getElementById('updateRequestId').value = task.requestId;
     document.getElementById('updateRoomNo').value = task.room;
-    document.getElementById('updateRequestType').value = task.requestType;
+    const updateRequestTypeSelect = document.getElementById('updateRequestType');
+    ensureOptionExists(updateRequestTypeSelect, task.requestType);
+    updateRequestTypeSelect.value = task.requestType;
     document.getElementById('updateStaffName').value = task.assignedStaff;
     document.getElementById('updateTaskStatus').value = task.taskStatus;
 
@@ -132,6 +135,21 @@ async function openUpdateDialog(id) {
   } catch {
     showMessage('Error fetching task details.');
   }
+}
+
+function ensureOptionExists(selectEl, value) {
+  if (!(selectEl instanceof HTMLSelectElement)) return;
+
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return;
+
+  const exists = Array.from(selectEl.options).some((option) => option.value === normalized || option.text === normalized);
+  if (exists) return;
+
+  const option = document.createElement('option');
+  option.value = normalized;
+  option.textContent = normalized;
+  selectEl.appendChild(option);
 }
 
 async function handleAddSubmit(e) {

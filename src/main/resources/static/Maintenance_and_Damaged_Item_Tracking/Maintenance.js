@@ -28,7 +28,10 @@ const updateAssignedToInput = document.getElementById('updateAssignedTo');
 const updateStatusInput = document.getElementById('updateStatus');
 
 function statusClass(status) {
+  if (status === 'Pending') return 'open';
   if (status === 'In Progress') return 'in-progress';
+  if (status === 'Completed') return 'open';
+  if (status === 'Repaired') return 'open';
   if (status === 'Replacement Needed') return 'replacement';
   return 'open';
 }
@@ -38,10 +41,10 @@ function approvalLabel(approved) {
 }
 
 function renderMetrics(tickets) {
-  openIssuesMetric.textContent = String(tickets.filter((t) => t.status === 'Open').length).padStart(2, '0');
+  openIssuesMetric.textContent = String(tickets.filter((t) => t.status === 'Pending' || t.status === 'Open').length).padStart(2, '0');
   inProgressMetric.textContent = String(tickets.filter((t) => t.status === 'In Progress').length).padStart(2, '0');
-  repairedMetric.textContent = String(tickets.filter((t) => t.status === 'Repaired').length).padStart(2, '0');
-  replacementMetric.textContent = String(tickets.filter((t) => t.status === 'Replacement Needed').length).padStart(2, '0');
+  repairedMetric.textContent = String(tickets.filter((t) => t.status === 'Completed' || t.status === 'Repaired').length).padStart(2, '0');
+  replacementMetric.textContent = String(tickets.filter((t) => (t.supervisorDecision || '').toLowerCase() === 'rejected').length).padStart(2, '0');
 }
 
 function renderTable(tickets) {
@@ -64,7 +67,7 @@ function renderTable(tickets) {
       <td>${ticket.issue}</td>
       <td>${ticket.assignedTo}</td>
       <td><span class="tag ${tagClass}">${ticket.status}</span></td>
-      <td><span class="tag ${ticket.approved ? 'open' : 'replacement'}">${approvalLabel(Boolean(ticket.approved))}</span></td>
+      <td><span class="tag ${ticket.approved ? 'open' : 'replacement'}">${ticket.supervisorDecision || approvalLabel(Boolean(ticket.approved))}</span></td>
       <td>
         <div class="row-actions">
           <button type="button" class="small-btn" data-action="edit" data-id="${ticket.id}">Update</button>

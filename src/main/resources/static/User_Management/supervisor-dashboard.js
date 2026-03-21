@@ -1,12 +1,14 @@
+const currentRole = localStorage.getItem('currentUserRole') || 'Staff Supervisor';
+
+const state = {
+  rows: [],
+};
+
 function setMetric(id, value) {
   const el = document.getElementById(id);
   if (el) {
     el.textContent = String(value ?? 0);
   }
-}
-
-function countByStatus(items, field, expected) {
-  return items.filter(item => String(item?.[field] || '').toLowerCase() === expected.toLowerCase()).length;
 }
 
 function escapeHtml(value) {
@@ -18,166 +20,184 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-const currentRole = localStorage.getItem('currentUserRole') || 'Staff Supervisor';
+function normalize(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function showMessage(id, message) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = message;
+  }
+}
 
 async function apiPost(url, body) {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
   return res.json();
 }
 
-async function loadDashboardMetrics() {
+async function loadUnifiedData() {
   try {
-    const [guestRes, housekeepingRes, inventoryRes, maintenanceRes, ordersRes] = await Promise.all([
-      fetch('/guestservice/list'),
-      fetch('/housekeeping/list'),
-      fetch('/inventory/list'),
-      fetch('/maintenance/list'),
-      fetch('/orders/list')
-    ]);
+    const res = await fetch('/guestservice/supervisor/unified');
+    if (!res.ok) {
+      throw new Error('Failed to load supervisor panel data.');
+    }
 
-    const guestRequests = guestRes.ok ? await guestRes.json() : [];
-    const housekeepingTasks = housekeepingRes.ok ? await housekeepingRes.json() : [];
-    const inventoryItems = inventoryRes.ok ? await inventoryRes.json() : [];
-    const maintenanceTickets = maintenanceRes.ok ? await maintenanceRes.json() : [];
-    const orders = ordersRes.ok ? await ordersRes.json() : [];
+    const data = await res.json();
+    const guest = Array.isArray(data.guestPending) ? data.guestPending : [];
+    const housekeeping = Array.isArray(data.housekeepingTasks) ? data.housekeepingTasks : [];
+    const maintenance = Array.isArray(data.maintenanceTasks) ? data.maintenanceTasks : [];
 
-    const guestPending = countByStatus(guestRequests, 'status', 'Pending');
-    const guestInProgress = countByStatus(guestRequests, 'status', 'In Progress');
-    const guestCompleted = countByStatus(guestRequests, 'status', 'Completed');
-
-    setMetric('guestTotalMetric', guestRequests.length);
-    setMetric('guestPendingMetric', guestPending);
-    setMetric('guestInProgressMetric', guestInProgress);
-    setMetric('guestCompletedMetric', guestCompleted);
-
-    const housekeepingAssigned = countByStatus(housekeepingTasks, 'taskStatus', 'Assigned');
-    const housekeepingInProgress = countByStatus(housekeepingTasks, 'taskStatus', 'In Progress');
-    const housekeepingCompleted = countByStatus(housekeepingTasks, 'taskStatus', 'Completed');
-
-    setMetric('housekeepingTotalMetric', housekeepingTasks.length);
-    setMetric('housekeepingAssignedMetric', housekeepingAssigned);
-    setMetric('housekeepingInProgressMetric', housekeepingInProgress);
-    setMetric('housekeepingCompletedMetric', housekeepingCompleted);
-
-    const inventoryLowStock = countByStatus(inventoryItems, 'status', 'Low Stock');
-    const inventoryDamaged = inventoryItems.reduce((sum, item) => sum + Number(item?.damaged || 0), 0);
-    const inventoryMissing = inventoryItems.reduce((sum, item) => sum + Number(item?.missing || 0), 0);
-
-    setMetric('inventoryTotalMetric', inventoryItems.length);
-    setMetric('inventoryLowStockMetric', inventoryLowStock);
-    setMetric('inventoryDamagedMetric', inventoryDamaged);
-    setMetric('inventoryMissingMetric', inventoryMissing);
-
-    const maintenanceOpen = countByStatus(maintenanceTickets, 'status', 'Open');
-    const maintenanceInProgress = countByStatus(maintenanceTickets, 'status', 'In Progress');
-    const maintenanceRepaired = countByStatus(maintenanceTickets, 'status', 'Repaired');
-    const maintenanceReplacement = countByStatus(maintenanceTickets, 'status', 'Replacement Needed');
-
-    setMetric('maintenanceOpenMetric', maintenanceOpen);
-    setMetric('maintenanceInProgressMetric', maintenanceInProgress);
-    setMetric('maintenanceRepairedMetric', maintenanceRepaired);
-    setMetric('maintenanceReplacementMetric', maintenanceReplacement);
-
-    const ordersPending = countByStatus(orders, 'status', 'Pending');
-    const ordersPartial = countByStatus(orders, 'status', 'Partial');
-    const ordersComplete = countByStatus(orders, 'status', 'Complete');
-
-    setMetric('ordersTotalMetric', orders.length);
-    setMetric('ordersPendingMetric', ordersPending);
-    setMetric('ordersPartialMetric', ordersPartial);
-    setMetric('ordersCompleteMetric', ordersComplete);
-
-    setMetric('overviewOpenGuestRequestsMetric', guestPending + guestInProgress);
-    setMetric('overviewPendingHousekeepingMetric', housekeepingAssigned + housekeepingInProgress);
-    setMetric('overviewLowInventoryMetric', inventoryLowStock);
-    setMetric('overviewOpenMaintenanceMetric', maintenanceOpen + maintenanceInProgress + maintenanceReplacement);
-  } catch (err) {
-    console.error('Could not load dashboard metrics', err);
+    state.rows = [...guest, ...housekeeping, ...maintenance];
+    autoSwitchToAwaitingReviewIfNeeded();
+    renderMetrics(state.rows);
+    renderUnifiedTable();
+  } catch (error) {
+    showMessage('taskActionMessage', error.message || 'Failed to load data.');
   }
 }
 
-async function loadApprovalTables() {
-  try {
-    const [guestRoutingRes, housekeepingRes, maintenanceRes] = await Promise.all([
-      fetch('/guestservice/routing-pending'),
-      fetch('/housekeeping/list'),
-      fetch('/maintenance/list')
-    ]);
-
-    const routingRequests = guestRoutingRes.ok ? await guestRoutingRes.json() : [];
-    const housekeepingTasks = housekeepingRes.ok ? await housekeepingRes.json() : [];
-    const maintenanceTickets = maintenanceRes.ok ? await maintenanceRes.json() : [];
-
-    const guestRoutingBody = document.getElementById('guestRoutingTableBody');
-    if (guestRoutingBody) {
-      guestRoutingBody.innerHTML = routingRequests.length
-        ? routingRequests.map((request) => `
-          <tr>
-            <td>${escapeHtml(request.requestId)}</td>
-            <td>${escapeHtml(request.roomName)}</td>
-            <td>${escapeHtml(request.request)}</td>
-            <td>${escapeHtml(formatDateTime(request.requestDateTime))}</td>
-            <td>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="approve-btn" data-module="guest-route" data-route="housekeeping" data-requestid="${escapeHtml(request.requestId)}">Housekeeping</button>
-                <button type="button" class="approve-btn" data-module="guest-route" data-route="maintenance" data-requestid="${escapeHtml(request.requestId)}">Maintenance</button>
-              </div>
-            </td>
-          </tr>
-        `).join('')
-        : '<tr><td colspan="5">No new guest requests waiting for routing.</td></tr>';
-    }
-
-    const housekeepingBody = document.getElementById('housekeepingApprovalTableBody');
-    if (housekeepingBody) {
-      const completedTasks = housekeepingTasks.filter((task) => String(task.taskStatus).toLowerCase() === 'completed');
-      housekeepingBody.innerHTML = completedTasks.length
-        ? completedTasks.map((task) => `
-          <tr>
-            <td>${escapeHtml(task.requestId)}</td>
-            <td>${escapeHtml(task.room)}</td>
-            <td>${escapeHtml(task.taskStatus)}</td>
-            <td><span class="status-pill ${task.approved ? 'active' : 'inactive'}">${task.approved ? 'Approved' : 'Not Approved'}</span></td>
-            <td><button type="button" class="approve-btn" data-module="housekeeping" data-id="${task.id}" data-approved="${task.approved ? 'false' : 'true'}">${task.approved ? 'Unapprove' : 'Approve'}</button></td>
-          </tr>
-        `).join('')
-        : '<tr><td colspan="5">No completed housekeeping tasks pending approval.</td></tr>';
-    }
-
-    const maintenanceBody = document.getElementById('maintenanceApprovalTableBody');
-    if (maintenanceBody) {
-      const repairedTickets = maintenanceTickets.filter((ticket) => String(ticket.status).toLowerCase() === 'repaired');
-      maintenanceBody.innerHTML = repairedTickets.length
-        ? repairedTickets.map((ticket) => `
-          <tr>
-            <td>${escapeHtml(ticket.ticket)}</td>
-            <td>${escapeHtml(ticket.location)}</td>
-            <td>${escapeHtml(ticket.status)}</td>
-            <td><span class="status-pill ${ticket.approved ? 'active' : 'inactive'}">${ticket.approved ? 'Approved' : 'Not Approved'}</span></td>
-            <td><button type="button" class="approve-btn" data-module="maintenance" data-id="${ticket.id}" data-approved="${ticket.approved ? 'false' : 'true'}">${ticket.approved ? 'Unapprove' : 'Approve'}</button></td>
-          </tr>
-        `).join('')
-        : '<tr><td colspan="5">No repaired maintenance tickets pending approval.</td></tr>';
-    }
-  } catch (err) {
-    console.error('Could not load approval tables', err);
-  }
+function countGuestPending() {
+  return state.rows.filter((item) => item.source === 'GUEST' && normalize(item.status) === 'pending').length;
 }
 
-async function updateApproval(moduleName, id, approved) {
-  const url = moduleName === 'housekeeping' ? '/housekeeping/approve' : '/maintenance/approve';
-  const data = await apiPost(url, { id, approved, role: currentRole });
+function countAwaitingReview() {
+  return state.rows.filter((item) =>
+    (item.source === 'HOUSEKEEPING' || item.source === 'MAINTENANCE')
+    && normalize(item.status) === 'completed'
+    && normalize(item.supervisorDecision) !== 'approved').length;
+}
 
-  if (!data.success) {
-    alert(data.message || 'Approval update failed.');
+function autoSwitchToAwaitingReviewIfNeeded() {
+  const viewFilter = document.getElementById('viewFilter');
+  if (!(viewFilter instanceof HTMLSelectElement)) {
     return;
   }
 
-  await Promise.all([loadDashboardMetrics(), loadApprovalTables()]);
+  const guestPendingCount = countGuestPending();
+  const awaitingReviewCount = countAwaitingReview();
+
+  if (viewFilter.value === 'guest-pending' && guestPendingCount === 0 && awaitingReviewCount > 0) {
+    viewFilter.value = 'awaiting-review';
+    showMessage('taskActionMessage', 'Switched to Completed Awaiting Review because tasks need supervisor approval.');
+  }
+}
+
+function renderMetrics(rows) {
+  const pendingGuest = rows.filter((item) => item.source === 'GUEST' && normalize(item.status) === 'pending').length;
+  const inProgress = rows.filter((item) => normalize(item.status) === 'in progress').length;
+  const awaitingReview = rows.filter((item) => normalize(item.status) === 'completed' && normalize(item.supervisorDecision) !== 'approved').length;
+  const approved = rows.filter((item) => normalize(item.supervisorDecision) === 'approved').length;
+  const rejected = rows.filter((item) => normalize(item.supervisorDecision) === 'rejected').length;
+
+  setMetric('pendingGuestMetric', pendingGuest);
+  setMetric('inProgressTasksMetric', inProgress);
+  setMetric('pendingReviewMetric', awaitingReview);
+  setMetric('approvedMetric', approved);
+  setMetric('rejectedMetric', rejected);
+}
+
+function filteredRows() {
+  const view = document.getElementById('viewFilter')?.value || 'guest-pending';
+  const department = document.getElementById('departmentFilter')?.value || 'all';
+  const query = normalize(document.getElementById('searchInput')?.value || '');
+
+  return state.rows.filter((row) => {
+    if (view === 'guest-pending' && !(row.source === 'GUEST' && normalize(row.status) === 'pending')) {
+      return false;
+    }
+    if (view === 'awaiting-review' && !(normalize(row.status) === 'completed' && normalize(row.supervisorDecision) !== 'approved')) {
+      return false;
+    }
+    if (view === 'rejected' && normalize(row.supervisorDecision) !== 'rejected') {
+      return false;
+    }
+
+    if (department !== 'all' && row.department !== department) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    return [row.taskCode, row.roomOrLocation, row.requestType, row.assignedTo, row.department]
+      .some((value) => normalize(value).includes(query));
+  });
+}
+
+function renderUnifiedTable() {
+  const body = document.getElementById('unifiedTaskTableBody');
+  if (!body) {
+    return;
+  }
+
+  const rows = filteredRows();
+
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="9">No matching tasks found for current filters.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.taskCode)}</td>
+      <td>${escapeHtml(row.itemType)}</td>
+      <td>${escapeHtml(row.department)}</td>
+      <td>${escapeHtml(row.roomOrLocation)}</td>
+      <td>${escapeHtml(row.requestType)}</td>
+      <td>${escapeHtml(row.assignedTo)}</td>
+      <td><span class="status-pill ${statusClass(row.status)}">${escapeHtml(row.status)}</span></td>
+      <td><span class="status-pill ${decisionClass(row.supervisorDecision)}">${escapeHtml(row.supervisorDecision)}</span></td>
+      <td>${rowActions(row)}</td>
+    </tr>
+  `).join('');
+}
+
+function rowActions(row) {
+  if (row.source === 'GUEST' && normalize(row.status) === 'pending') {
+    return `
+      <div class="row-actions">
+        <button class="approve-btn" data-action="route" data-requestid="${escapeHtml(row.taskCode)}" data-route="housekeeping">Assign Housekeeping</button>
+        <button class="approve-btn" data-action="route" data-requestid="${escapeHtml(row.taskCode)}" data-route="maintenance">Assign Maintenance</button>
+      </div>
+    `;
+  }
+
+  const eligibleForDecision =
+    (row.source === 'HOUSEKEEPING' || row.source === 'MAINTENANCE')
+    && normalize(row.status) === 'completed'
+    && normalize(row.supervisorDecision) !== 'approved';
+
+  if (eligibleForDecision) {
+    return `
+      <div class="row-actions">
+        <button class="approve-btn" data-action="approve" data-source="${escapeHtml(row.source)}" data-id="${row.id}">Approve</button>
+        <button class="approve-btn reject" data-action="reject" data-source="${escapeHtml(row.source)}" data-id="${row.id}">Reject</button>
+      </div>
+    `;
+  }
+
+  return '<span class="status-pill muted">No Action</span>';
+}
+
+function statusClass(status) {
+  const value = normalize(status);
+  if (value === 'pending') return 'inactive';
+  if (value === 'in progress') return 'active';
+  if (value === 'completed') return 'active';
+  return 'muted';
+}
+
+function decisionClass(decision) {
+  const value = normalize(decision);
+  if (value === 'approved') return 'active';
+  if (value === 'rejected') return 'inactive';
+  return 'muted';
 }
 
 async function routeGuestRequest(requestId, targetModule) {
@@ -188,44 +208,90 @@ async function routeGuestRequest(requestId, targetModule) {
   });
 
   if (!data.success) {
-    alert(data.message || 'Could not route guest request.');
+    showMessage('taskActionMessage', data.message || 'Could not assign request.');
     return;
   }
 
-  await Promise.all([loadDashboardMetrics(), loadApprovalTables()]);
+  showMessage('taskActionMessage', data.message || 'Request assigned successfully.');
+  await loadUnifiedData();
 }
 
-document.addEventListener('click', async (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement) || !target.classList.contains('approve-btn')) return;
+async function submitSupervisorDecision(source, id, decision) {
+  const isReject = normalize(decision) === 'rejected';
+  let reassignedTo = '';
+  let rejectionReason = '';
 
-  const moduleName = target.dataset.module;
+  if (isReject) {
+    rejectionReason = window.prompt('Enter rejection reason (required):', '') || '';
+    reassignedTo = window.prompt('Reassign to staff member (required):', '') || '';
 
-  if (moduleName === 'guest-route') {
-    const requestId = target.dataset.requestid;
-    const routeTo = target.dataset.route;
-    if (!requestId || !routeTo) return;
-    await routeGuestRequest(requestId, routeTo);
+    if (!rejectionReason.trim() || !reassignedTo.trim()) {
+      showMessage('taskActionMessage', 'Rejection reason and reassignment are required.');
+      return;
+    }
+  }
+
+  const endpoint = source === 'HOUSEKEEPING' ? '/housekeeping/approve' : '/maintenance/approve';
+  const data = await apiPost(endpoint, {
+    id,
+    decision,
+    reassignedTo,
+    rejectionReason,
+    role: currentRole,
+  });
+
+  if (!data.success) {
+    showMessage('taskActionMessage', data.message || 'Failed to update supervisor decision.');
     return;
   }
 
-  const id = Number(target.dataset.id);
-  const approved = String(target.dataset.approved) === 'true';
-
-  if (!moduleName || Number.isNaN(id)) return;
-  await updateApproval(moduleName, id, approved);
-});
-
-function formatDateTime(value) {
-  if (!value) {
-    return '-';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
-  }
-  return date.toLocaleString();
+  showMessage('taskActionMessage', data.message || 'Decision updated.');
+  await loadUnifiedData();
 }
 
-loadDashboardMetrics();
-loadApprovalTables();
+function attachListeners() {
+  document.getElementById('refreshButton')?.addEventListener('click', loadUnifiedData);
+  document.getElementById('viewFilter')?.addEventListener('change', renderUnifiedTable);
+  document.getElementById('departmentFilter')?.addEventListener('change', renderUnifiedTable);
+  document.getElementById('searchInput')?.addEventListener('input', renderUnifiedTable);
+
+  document.addEventListener('click', async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !target.classList.contains('approve-btn')) {
+      return;
+    }
+
+    const action = target.dataset.action;
+    if (!action) {
+      return;
+    }
+
+    if (action === 'route') {
+      const requestId = target.dataset.requestid;
+      const routeTo = target.dataset.route;
+      if (requestId && routeTo) {
+        await routeGuestRequest(requestId, routeTo);
+      }
+      return;
+    }
+
+    const id = Number(target.dataset.id);
+    const source = target.dataset.source;
+
+    if (!source || Number.isNaN(id)) {
+      return;
+    }
+
+    if (action === 'approve') {
+      await submitSupervisorDecision(source, id, 'Approved');
+      return;
+    }
+
+    if (action === 'reject') {
+      await submitSupervisorDecision(source, id, 'Rejected');
+    }
+  });
+}
+
+attachListeners();
+loadUnifiedData();

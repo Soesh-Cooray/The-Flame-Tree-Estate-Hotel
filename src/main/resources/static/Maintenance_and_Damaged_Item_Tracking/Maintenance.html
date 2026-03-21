@@ -25,7 +25,7 @@
         <h2>Repair / Replacement Status</h2>
         <div class="status-grid">
           <article class="status-card">
-            <h3>Open Issues</h3>
+            <h3>Pending</h3>
             <p class="metric" id="openIssuesMetric">0</p>
             <p>Newly reported damaged assets awaiting action.</p>
           </article>
@@ -35,14 +35,14 @@
             <p>Tasks currently assigned and under maintenance.</p>
           </article>
           <article class="status-card">
-            <h3>Repaired</h3>
+            <h3>Completed</h3>
             <p class="metric" id="repairedMetric">0</p>
             <p>Resolved issues completed by maintenance team.</p>
           </article>
           <article class="status-card">
-            <h3>Replacement Needed</h3>
+            <h3>Rejected</h3>
             <p class="metric" id="replacementMetric">0</p>
-            <p>Items marked for purchase and replacement workflow.</p>
+            <p>Supervisor rejected tasks that were reassigned.</p>
           </article>
         </div>
       </section>
@@ -92,10 +92,9 @@
       <label for="status">Status</label>
       <select id="status" required>
         <option value="">Select status</option>
-        <option>Open</option>
+        <option>Pending</option>
         <option>In Progress</option>
-        <option>Repaired</option>
-        <option>Replacement Needed</option>
+        <option>Completed</option>
       </select>
 
       <div class="dialog-actions">
@@ -125,10 +124,9 @@
 
       <label for="updateStatus">Status</label>
       <select id="updateStatus" required>
-        <option>Open</option>
+        <option>Pending</option>
         <option>In Progress</option>
-        <option>Repaired</option>
-        <option>Replacement Needed</option>
+        <option>Completed</option>
       </select>
 
       <div class="dialog-actions">

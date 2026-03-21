@@ -100,6 +100,13 @@ body {
   width: fit-content;
 }
 
+.module-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .back-link:hover,
 .module-link:hover {
   border-color: rgba(200, 146, 255, 0.65);
@@ -156,6 +163,32 @@ body {
   border-radius: 12px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.toolbar {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.toolbar label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  letter-spacing: 0.02em;
+}
+
+.toolbar select,
+.toolbar input {
+  width: 100%;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
 }
 
 .panel-sub h3 {
@@ -221,6 +254,12 @@ body {
   border: 1px solid rgba(255, 95, 95, 0.3);
 }
 
+.status-pill.muted {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .approve-btn {
   border: 1px solid rgba(200, 146, 255, 0.38);
   border-radius: 8px;
@@ -242,6 +281,29 @@ body {
 
 .approve-btn:active {
   transform: translateY(1px);
+}
+
+.approve-btn.reject {
+  border-color: rgba(255, 95, 95, 0.42);
+  background: linear-gradient(120deg, rgba(255, 95, 95, 0.36), rgba(181, 70, 70, 0.36));
+}
+
+.approve-btn.reject:hover {
+  border-color: rgba(255, 95, 95, 0.75);
+  background: linear-gradient(120deg, rgba(255, 95, 95, 0.56), rgba(181, 70, 70, 0.56));
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#taskActionMessage {
+  min-height: 24px;
+  margin: 12px 0 0;
+  color: var(--tone-cream);
+  font-weight: 600;
 }
 
 .summary-section {
