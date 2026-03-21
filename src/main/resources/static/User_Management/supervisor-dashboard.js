@@ -293,11 +293,13 @@ function decisionClass(decision) {
 }
 
 async function routeGuestRequest(requestId, targetModule, assignedStaff) {
+  const role = currentRole && currentRole.trim() ? currentRole.trim() : 'Staff Supervisor';
+  
   const data = await apiPost('/guestservice/route', {
     requestId,
     targetModule,
     assignedStaff,
-    role: currentRole,
+    role: role,
   });
 
   if (!data.success) {

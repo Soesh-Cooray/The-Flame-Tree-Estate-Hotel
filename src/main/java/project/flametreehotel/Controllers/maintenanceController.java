@@ -190,7 +190,9 @@ public class maintenanceController {
     }
 
     private boolean isSupervisorOrManager(String role) {
-        String normalized = role == null ? "" : role.trim().toLowerCase();
-        return normalized.contains("manager") || normalized.contains("supervisor");
+        if (role == null) return false;
+        String normalized = role.trim().toLowerCase();
+        return normalized.contains("manager") || normalized.contains("supervisor") || 
+               "manager".equals(normalized) || "supervisor".equals(normalized);
     }
 }
