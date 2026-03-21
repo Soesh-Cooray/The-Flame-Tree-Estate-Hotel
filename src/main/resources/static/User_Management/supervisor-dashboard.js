@@ -2,6 +2,10 @@ const currentRole = localStorage.getItem('currentUserRole') || 'Staff Supervisor
 
 const state = {
   rows: [],
+  assignmentStaff: {
+    housekeeping: [],
+    maintenance: [],
+  },
 };
 
 function setMetric(id, value) {
@@ -42,15 +46,22 @@ async function apiPost(url, body) {
 
 async function loadUnifiedData() {
   try {
-    const res = await fetch('/guestservice/supervisor/unified');
-    if (!res.ok) {
+    const [panelRes, usersRes] = await Promise.all([
+      fetch('/guestservice/supervisor/unified'),
+      fetch('/auth/users'),
+    ]);
+
+    if (!panelRes.ok) {
       throw new Error('Failed to load supervisor panel data.');
     }
 
-    const data = await res.json();
+    const data = await panelRes.json();
     const guest = Array.isArray(data.guestPending) ? data.guestPending : [];
     const housekeeping = Array.isArray(data.housekeepingTasks) ? data.housekeepingTasks : [];
     const maintenance = Array.isArray(data.maintenanceTasks) ? data.maintenanceTasks : [];
+
+    const users = usersRes.ok ? await usersRes.json() : [];
+    hydrateAssignmentStaff(users);
 
     state.rows = [...guest, ...housekeeping, ...maintenance];
     renderMetrics(state.rows);
@@ -58,6 +69,48 @@ async function loadUnifiedData() {
   } catch (error) {
     showMessage('taskActionMessage', error.message || 'Failed to load data.');
   }
+}
+
+function normalizeRole(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function hydrateAssignmentStaff(users) {
+  const safeUsers = Array.isArray(users) ? users : [];
+  const activeUsers = safeUsers.filter((user) => Boolean(user?.status));
+
+  const housekeeping = activeUsers
+    .filter((user) => normalizeRole(user?.role).includes('housekeeping'))
+    .map((user) => String(user?.username || '').trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  const maintenance = activeUsers
+    .filter((user) => normalizeRole(user?.role).includes('maintenance'))
+    .map((user) => String(user?.username || '').trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  state.assignmentStaff = {
+    housekeeping: [...new Set(housekeeping)],
+    maintenance: [...new Set(maintenance)],
+  };
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;');
+}
+
+function staffSelectOptions(targetModule) {
+  const staff = state.assignmentStaff[targetModule] || [];
+  if (!staff.length) {
+    return '<option value="">No available staff</option>';
+  }
+
+  return `
+    <option value="">Select staff</option>
+    ${staff.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('')}
+  `;
 }
 
 function renderMetrics(rows) {
@@ -174,10 +227,17 @@ function renderApprovalTable() {
 
 function rowAssignmentActions(row) {
   if (row.source === 'GUEST' && normalize(row.status) === 'pending') {
+    const requestCode = escapeAttr(row.taskCode);
     return `
       <div class="row-actions">
-        <button class="approve-btn" data-action="route" data-requestid="${escapeHtml(row.taskCode)}" data-route="housekeeping">Assign Housekeeping</button>
-        <button class="approve-btn" data-action="route" data-requestid="${escapeHtml(row.taskCode)}" data-route="maintenance">Assign Maintenance</button>
+        <select class="assignment-route-select" data-requestid="${requestCode}">
+          <option value="housekeeping">Housekeeping</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+        <select class="assignment-staff-select" data-requestid="${requestCode}">
+          ${staffSelectOptions('housekeeping')}
+        </select>
+        <button class="approve-btn" data-action="route-selected" data-requestid="${requestCode}">Assign</button>
       </div>
     `;
   }
@@ -218,10 +278,11 @@ function decisionClass(decision) {
   return 'muted';
 }
 
-async function routeGuestRequest(requestId, targetModule) {
+async function routeGuestRequest(requestId, targetModule, assignedStaff) {
   const data = await apiPost('/guestservice/route', {
     requestId,
     targetModule,
+    assignedStaff,
     role: currentRole,
   });
 
@@ -276,6 +337,26 @@ function attachListeners() {
   document.getElementById('departmentFilter')?.addEventListener('change', renderTaskQueues);
   document.getElementById('searchInput')?.addEventListener('input', renderTaskQueues);
 
+  document.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement) || !target.classList.contains('assignment-route-select')) {
+      return;
+    }
+
+    const requestId = target.dataset.requestid;
+    if (!requestId) {
+      return;
+    }
+
+    const rowActions = target.closest('.row-actions');
+    const staffSelect = rowActions?.querySelector('.assignment-staff-select');
+    if (!(staffSelect instanceof HTMLSelectElement)) {
+      return;
+    }
+
+    staffSelect.innerHTML = staffSelectOptions(target.value);
+  });
+
   document.addEventListener('click', async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement) || !target.classList.contains('approve-btn')) {
@@ -287,11 +368,27 @@ function attachListeners() {
       return;
     }
 
-    if (action === 'route') {
+    if (action === 'route-selected') {
       const requestId = target.dataset.requestid;
-      const routeTo = target.dataset.route;
+      const rowActions = target.closest('.row-actions');
+      const routeSelect = rowActions?.querySelector('.assignment-route-select');
+      const staffSelect = rowActions?.querySelector('.assignment-staff-select');
+
+      if (!(routeSelect instanceof HTMLSelectElement) || !(staffSelect instanceof HTMLSelectElement)) {
+        showMessage('taskActionMessage', 'Could not read assignment inputs.');
+        return;
+      }
+
+      const routeTo = routeSelect.value;
+      const assignedStaff = staffSelect.value;
+
+      if (!assignedStaff) {
+        showMessage('taskActionMessage', `Please select a ${routeTo} staff member.`);
+        return;
+      }
+
       if (requestId && routeTo) {
-        await routeGuestRequest(requestId, routeTo);
+        await routeGuestRequest(requestId, routeTo, assignedStaff);
       }
       return;
     }
