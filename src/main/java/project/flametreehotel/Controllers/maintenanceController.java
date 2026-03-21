@@ -31,6 +31,11 @@ public class maintenanceController {
         return ResponseEntity.ok(service.getAllTickets());
     }
 
+    @GetMapping("/next-ticket-id")
+    public ResponseEntity<Map<String, String>> nextTicketId() {
+        return ResponseEntity.ok(Map.of("ticket", service.generateNextMaintenanceTicketId()));
+    }
+
     /**
      * POST /maintenance/add
      * Body: { "ticket": "...", "location": "...", "issue": "...", "assignedTo": "...", "status": "..." }
@@ -45,7 +50,7 @@ public class maintenanceController {
         String assignedTo = (String) body.get("assignedTo");
         String status = (String) body.get("status");
 
-        if (ticket == null || ticket.isBlank() || location == null || location.isBlank()
+        if (location == null || location.isBlank()
                 || issue == null || issue.isBlank() || assignedTo == null || assignedTo.isBlank()
                 || status == null || status.isBlank()) {
             response.put("success", false);
@@ -54,7 +59,10 @@ public class maintenanceController {
         }
 
         try {
-            maintenance created = service.addTicket(ticket.trim(), location.trim(), issue.trim(), assignedTo.trim(), status);
+            String resolvedTicket = (ticket == null || ticket.isBlank())
+                    ? service.generateNextMaintenanceTicketId()
+                    : ticket.trim();
+            maintenance created = service.addTicket(resolvedTicket, location.trim(), issue.trim(), assignedTo.trim(), status);
             response.put("success", true);
             response.put("message", "Added ticket " + created.getTicket() + ".");
             response.put("ticket", created);
