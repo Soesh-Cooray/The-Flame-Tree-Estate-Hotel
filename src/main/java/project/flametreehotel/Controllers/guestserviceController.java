@@ -117,7 +117,7 @@ public class guestserviceController {
 
     /**
      * POST /guestservice/route
-     * Body: { "requestId": "REQ-001", "targetModule": "housekeeping|maintenance", "role": "Manager|Staff Supervisor" }
+     * Body: { "requestId": "REQ-001", "targetModule": "housekeeping|maintenance", "assignedStaff": "...", "role": "Manager|Staff Supervisor" }
      */
     @PostMapping("/route")
     public ResponseEntity<Map<String, Object>> routeGuestService(@RequestBody Map<String, Object> body) {
@@ -125,6 +125,7 @@ public class guestserviceController {
 
         String requestId = String.valueOf(body.getOrDefault("requestId", "")).trim();
         String targetModule = String.valueOf(body.getOrDefault("targetModule", "")).trim().toLowerCase();
+        String assignedStaff = String.valueOf(body.getOrDefault("assignedStaff", "")).trim();
         String role = String.valueOf(body.getOrDefault("role", "")).trim();
 
         boolean allowed = isSupervisorOrManager(role);
@@ -145,9 +146,9 @@ public class guestserviceController {
 
             switch (targetModule) {
                 case "housekeeping" -> housekeepingService.addTaskFromGuestRequest(
-                        request.getRequestId(), request.getRoomName(), request.getRequest());
+                    request.getRequestId(), request.getRoomName(), request.getRequest(), assignedStaff);
                 case "maintenance" -> maintenanceService.addTicketFromGuestRequest(
-                        request.getRequestId(), request.getRoomName(), request.getRequest());
+                    request.getRequestId(), request.getRoomName(), request.getRequest(), assignedStaff);
                 default -> {
                     response.put("success", false);
                     response.put("message", "Invalid targetModule. Use housekeeping or maintenance.");

@@ -44,7 +44,7 @@ public class maintenanceService {
         return repository.save(newTicket);
     }
 
-    public maintenance addTicketFromGuestRequest(String guestRequestId, String location, String issue) {
+    public maintenance addTicketFromGuestRequest(String guestRequestId, String location, String issue, String assignedStaff) {
         if (repository.findByGuestRequestId(guestRequestId).isPresent()) {
             throw new RuntimeException("This guest request has already been sent to maintenance.");
         }
@@ -58,7 +58,7 @@ public class maintenanceService {
         ticket.setTicket(ticketCode);
         ticket.setLocation(location);
         ticket.setIssue(issue);
-        ticket.setAssignedTo("Unassigned");
+        ticket.setAssignedTo(assignedStaff == null || assignedStaff.isBlank() ? "Unassigned" : assignedStaff.trim());
         ticket.setStatus(STATUS_PENDING);
         ticket.setApproved(false);
         ticket.setGuestRequestId(guestRequestId);

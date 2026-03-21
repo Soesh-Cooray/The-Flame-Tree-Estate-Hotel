@@ -57,7 +57,7 @@ public class housekeepingService {
         return repository.save(task);
     }
 
-    public housekeeping addTaskFromGuestRequest(String requestId, String room, String requestType) {
+    public housekeeping addTaskFromGuestRequest(String requestId, String room, String requestType, String assignedStaff) {
         if (repository.findByRequestId(requestId).isPresent()) {
             throw new RuntimeException("This guest request has already been sent to housekeeping.");
         }
@@ -66,7 +66,7 @@ public class housekeepingService {
         task.setRequestId(requestId);
         task.setRoom(room);
         task.setRequestType(requestType);
-        task.setAssignedStaff("Unassigned");
+        task.setAssignedStaff(assignedStaff == null || assignedStaff.isBlank() ? "Unassigned" : assignedStaff.trim());
         task.setTaskStatus(STATUS_PENDING);
         task.setApproved(false);
         task.setSupervisorDecision(DECISION_PENDING_REVIEW);
