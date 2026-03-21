@@ -53,37 +53,10 @@ async function loadUnifiedData() {
     const maintenance = Array.isArray(data.maintenanceTasks) ? data.maintenanceTasks : [];
 
     state.rows = [...guest, ...housekeeping, ...maintenance];
-    autoSwitchToAwaitingReviewIfNeeded();
     renderMetrics(state.rows);
-    renderUnifiedTable();
+    renderTaskQueues();
   } catch (error) {
     showMessage('taskActionMessage', error.message || 'Failed to load data.');
-  }
-}
-
-function countGuestPending() {
-  return state.rows.filter((item) => item.source === 'GUEST' && normalize(item.status) === 'pending').length;
-}
-
-function countAwaitingReview() {
-  return state.rows.filter((item) =>
-    (item.source === 'HOUSEKEEPING' || item.source === 'MAINTENANCE')
-    && normalize(item.status) === 'completed'
-    && normalize(item.supervisorDecision) !== 'approved').length;
-}
-
-function autoSwitchToAwaitingReviewIfNeeded() {
-  const viewFilter = document.getElementById('viewFilter');
-  if (!(viewFilter instanceof HTMLSelectElement)) {
-    return;
-  }
-
-  const guestPendingCount = countGuestPending();
-  const awaitingReviewCount = countAwaitingReview();
-
-  if (viewFilter.value === 'guest-pending' && guestPendingCount === 0 && awaitingReviewCount > 0) {
-    viewFilter.value = 'awaiting-review';
-    showMessage('taskActionMessage', 'Switched to Completed Awaiting Review because tasks need supervisor approval.');
   }
 }
 
@@ -101,23 +74,25 @@ function renderMetrics(rows) {
   setMetric('rejectedMetric', rejected);
 }
 
-function filteredRows() {
+function assignmentFilteredRows() {
   const view = document.getElementById('viewFilter')?.value || 'guest-pending';
   const department = document.getElementById('departmentFilter')?.value || 'all';
   const query = normalize(document.getElementById('searchInput')?.value || '');
 
   return state.rows.filter((row) => {
-    if (view === 'guest-pending' && !(row.source === 'GUEST' && normalize(row.status) === 'pending')) {
-      return false;
-    }
-    if (view === 'awaiting-review' && !(normalize(row.status) === 'completed' && normalize(row.supervisorDecision) !== 'approved')) {
-      return false;
-    }
-    if (view === 'rejected' && normalize(row.supervisorDecision) !== 'rejected') {
+    if (row.source !== 'GUEST') {
       return false;
     }
 
-    if (department !== 'all' && row.department !== department) {
+    if (view === 'guest-pending' && normalize(row.status) !== 'pending') {
+      return false;
+    }
+
+    if (view === 'awaiting-review' || view === 'rejected') {
+      return false;
+    }
+
+    if (department !== 'all' && department !== 'Guest Service') {
       return false;
     }
 
@@ -130,16 +105,55 @@ function filteredRows() {
   });
 }
 
-function renderUnifiedTable() {
-  const body = document.getElementById('unifiedTaskTableBody');
+function approvalRows() {
+  return state.rows.filter((row) =>
+    (row.source === 'HOUSEKEEPING' || row.source === 'MAINTENANCE')
+    && normalize(row.status) === 'completed'
+    && normalize(row.supervisorDecision) !== 'approved');
+}
+
+function renderTaskQueues() {
+  renderAssignmentTable();
+  renderApprovalTable();
+}
+
+function renderAssignmentTable() {
+  const body = document.getElementById('assignmentTaskTableBody');
   if (!body) {
     return;
   }
 
-  const rows = filteredRows();
+  const rows = assignmentFilteredRows();
 
   if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="9">No matching tasks found for current filters.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8">No assignment tasks found for current filters.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.taskCode)}</td>
+      <td>${escapeHtml(row.itemType)}</td>
+      <td>${escapeHtml(row.department)}</td>
+      <td>${escapeHtml(row.roomOrLocation)}</td>
+      <td>${escapeHtml(row.requestType)}</td>
+      <td>${escapeHtml(row.assignedTo)}</td>
+      <td><span class="status-pill ${statusClass(row.status)}">${escapeHtml(row.status)}</span></td>
+      <td>${rowAssignmentActions(row)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderApprovalTable() {
+  const body = document.getElementById('approvalTaskTableBody');
+  if (!body) {
+    return;
+  }
+
+  const rows = approvalRows();
+
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="9">No completed tasks currently waiting for supervisor approval.</td></tr>';
     return;
   }
 
@@ -153,12 +167,12 @@ function renderUnifiedTable() {
       <td>${escapeHtml(row.assignedTo)}</td>
       <td><span class="status-pill ${statusClass(row.status)}">${escapeHtml(row.status)}</span></td>
       <td><span class="status-pill ${decisionClass(row.supervisorDecision)}">${escapeHtml(row.supervisorDecision)}</span></td>
-      <td>${rowActions(row)}</td>
+      <td>${rowApprovalActions(row)}</td>
     </tr>
   `).join('');
 }
 
-function rowActions(row) {
+function rowAssignmentActions(row) {
   if (row.source === 'GUEST' && normalize(row.status) === 'pending') {
     return `
       <div class="row-actions">
@@ -168,6 +182,10 @@ function rowActions(row) {
     `;
   }
 
+  return '<span class="status-pill muted">No Action</span>';
+}
+
+function rowApprovalActions(row) {
   const eligibleForDecision =
     (row.source === 'HOUSEKEEPING' || row.source === 'MAINTENANCE')
     && normalize(row.status) === 'completed'
@@ -254,9 +272,9 @@ function attachListeners() {
     event.preventDefault();
     window.location.reload();
   });
-  document.getElementById('viewFilter')?.addEventListener('change', renderUnifiedTable);
-  document.getElementById('departmentFilter')?.addEventListener('change', renderUnifiedTable);
-  document.getElementById('searchInput')?.addEventListener('input', renderUnifiedTable);
+  document.getElementById('viewFilter')?.addEventListener('change', renderTaskQueues);
+  document.getElementById('departmentFilter')?.addEventListener('change', renderTaskQueues);
+  document.getElementById('searchInput')?.addEventListener('input', renderTaskQueues);
 
   document.addEventListener('click', async (event) => {
     const target = event.target;

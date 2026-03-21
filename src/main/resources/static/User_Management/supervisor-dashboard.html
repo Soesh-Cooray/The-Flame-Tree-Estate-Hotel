@@ -72,7 +72,26 @@
           <a class="module-link" href="../Maintenance_and_Damaged_Item_Tracking/Maintenance.html">Open Maintenance Module</a>
         </div>
         <div class="panel-sub">
-          <h3>Task Queue</h3>
+          <h3>Assignment Queue</h3>
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th>Task ID</th>
+                <th>Type</th>
+                <th>Department</th>
+                <th>Room / Location</th>
+                <th>Request / Issue</th>
+                <th>Assigned To</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="assignmentTaskTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-sub">
+          <h3>Approval Queue</h3>
           <table class="user-table">
             <thead>
               <tr>
@@ -87,7 +106,7 @@
                 <th>Action</th>
               </tr>
             </thead>
-            <tbody id="unifiedTaskTableBody"></tbody>
+            <tbody id="approvalTaskTableBody"></tbody>
           </table>
         </div>
         <p id="taskActionMessage" aria-live="polite"></p>
