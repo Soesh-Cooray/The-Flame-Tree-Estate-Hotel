@@ -21,4 +21,8 @@ public class maintenance {
     private boolean approved;
 
     private String guestRequestId;
+
+    private String supervisorDecision;
+
+    private String rejectionReason;
 }

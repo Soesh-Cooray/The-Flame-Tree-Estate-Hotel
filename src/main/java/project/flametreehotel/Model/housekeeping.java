@@ -27,4 +27,8 @@ public class housekeeping {
     private String taskStatus;
 
     private boolean approved;
+
+    private String supervisorDecision;
+
+    private String rejectionReason;
 }
