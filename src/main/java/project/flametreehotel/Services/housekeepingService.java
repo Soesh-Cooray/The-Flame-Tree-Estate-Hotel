@@ -1,6 +1,8 @@
 package project.flametreehotel.Services;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import project.flametreehotel.Repository.housekeepingRepository;
 @RequiredArgsConstructor
 public class housekeepingService {
 
+    private static final Pattern HKP_ID_PATTERN = Pattern.compile("HKP-(\\d+)");
     private static final String STATUS_PENDING = "Pending";
     private static final String STATUS_IN_PROGRESS = "In Progress";
     private static final String STATUS_COMPLETED = "Completed";
@@ -24,6 +27,16 @@ public class housekeepingService {
 
     public List<housekeeping> getAllTasks() {
         return repository.findAll();
+    }
+
+    public String generateNextHousekeepingTaskId() {
+        int max = repository.findAll().stream()
+                .map(housekeeping::getRequestId)
+                .mapToInt(this::extractHkpSequence)
+                .max()
+                .orElse(0);
+
+        return String.format("HKP-%03d", max + 1);
     }
 
     public housekeeping addTask(String requestId, String room, String requestType, String assignedStaff, String taskStatus) {
@@ -166,6 +179,23 @@ public class housekeepingService {
 
     private boolean isGuestRequest(String requestId) {
         return requestId != null && requestId.trim().toUpperCase().startsWith("REQ-");
+    }
+
+    private int extractHkpSequence(String requestId) {
+        if (requestId == null) {
+            return 0;
+        }
+
+        Matcher matcher = HKP_ID_PATTERN.matcher(requestId.trim().toUpperCase());
+        if (!matcher.matches()) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
     }
 
     public void deleteTask(int id) {

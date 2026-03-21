@@ -31,6 +31,11 @@ public class housekeepingController {
         return ResponseEntity.ok(service.getAllTasks());
     }
 
+    @GetMapping("/next-task-id")
+    public ResponseEntity<Map<String, String>> nextTaskId() {
+        return ResponseEntity.ok(Map.of("requestId", service.generateNextHousekeepingTaskId()));
+    }
+
     /**
      * POST /housekeeping/add
      * Body: { "requestId": "...", "room": "...", "requestType": "...", "assignedStaff": "...", "taskStatus": "..." }
@@ -45,7 +50,7 @@ public class housekeepingController {
         String assignedStaff = (String) body.get("assignedStaff");
         String taskStatus = (String) body.get("taskStatus");
 
-        if (requestId == null || requestId.isBlank() || room == null || room.isBlank()
+        if (room == null || room.isBlank()
                 || requestType == null || requestType.isBlank() || assignedStaff == null || assignedStaff.isBlank()
                 || taskStatus == null || taskStatus.isBlank()) {
             response.put("success", false);
@@ -54,7 +59,10 @@ public class housekeepingController {
         }
 
         try {
-            housekeeping created = service.addTask(requestId.trim(), room.trim(), requestType, assignedStaff.trim(), taskStatus);
+            String generatedRequestId = (requestId == null || requestId.isBlank())
+                    ? service.generateNextHousekeepingTaskId()
+                    : requestId.trim();
+            housekeeping created = service.addTask(generatedRequestId, room.trim(), requestType, assignedStaff.trim(), taskStatus);
             response.put("success", true);
             response.put("message", "Added task " + created.getRequestId() + ".");
             response.put("task", created);

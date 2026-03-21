@@ -106,9 +106,21 @@ function attachEventListeners() {
   });
 }
 
-function openAddDialog() {
+async function openAddDialog() {
   document.getElementById('addTaskForm').reset();
+  await fetchNextHousekeepingTaskId();
   document.getElementById('addTaskDialog').showModal();
+}
+
+async function fetchNextHousekeepingTaskId() {
+  try {
+    const res = await fetch('/housekeeping/next-task-id');
+    if (!res.ok) throw new Error('Could not generate next housekeeping task ID.');
+    const data = await res.json();
+    document.getElementById('requestId').value = data.requestId || '';
+  } catch {
+    showMessage('Error generating housekeeping task ID. Please try again.');
+  }
 }
 
 async function openUpdateDialog(id) {
