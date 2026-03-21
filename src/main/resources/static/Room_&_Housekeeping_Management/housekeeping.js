@@ -81,6 +81,7 @@ function renderTable(tasks) {
 
 function attachEventListeners() {
   document.getElementById('openAddDialogBtn').addEventListener('click', openAddDialog);
+  document.getElementById('requestType').addEventListener('change', toggleCustomRequestTypeInput);
 
   document.getElementById('cancelAddDialogBtn').addEventListener('click', () => {
     document.getElementById('addTaskDialog').close();
@@ -110,9 +111,27 @@ function attachEventListeners() {
 
 async function openAddDialog() {
   document.getElementById('addTaskForm').reset();
+  toggleCustomRequestTypeInput();
   await loadHousekeepingStaffOptions();
   await fetchNextHousekeepingTaskId();
   document.getElementById('addTaskDialog').showModal();
+}
+
+function toggleCustomRequestTypeInput() {
+  const requestTypeSelect = document.getElementById('requestType');
+  const customContainer = document.getElementById('customRequestTypeContainer');
+  const customInput = document.getElementById('customRequestType');
+
+  if (!(requestTypeSelect instanceof HTMLSelectElement) || !(customContainer instanceof HTMLElement) || !(customInput instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const isOther = requestTypeSelect.value === 'Other';
+  customContainer.style.display = isOther ? 'block' : 'none';
+
+  if (!isOther) {
+    customInput.value = '';
+  }
 }
 
 function normalizeRole(value) {
@@ -220,13 +239,27 @@ async function handleAddSubmit(e) {
     return;
   }
 
+  const requestTypeValue = document.getElementById('requestType').value;
+  const customRequestTypeValue = document.getElementById('customRequestType').value.trim();
+  const resolvedRequestType = requestTypeValue === 'Other' ? customRequestTypeValue : requestTypeValue;
+
   const payload = {
     requestId,
     room: document.getElementById('roomNo').value,
-    requestType: document.getElementById('requestType').value,
+    requestType: resolvedRequestType,
     assignedStaff: document.getElementById('staffName').value,
     taskStatus: document.getElementById('taskStatus').value,
   };
+
+  if (!requestTypeValue) {
+    showMessage('Please select a request type.');
+    return;
+  }
+
+  if (requestTypeValue === 'Other' && !customRequestTypeValue) {
+    showMessage('Please type a custom request type.');
+    return;
+  }
 
   if (!payload.room) {
     showMessage('Please select a room.');
