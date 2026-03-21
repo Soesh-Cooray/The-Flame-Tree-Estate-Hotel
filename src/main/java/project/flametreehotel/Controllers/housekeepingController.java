@@ -191,8 +191,6 @@ public class housekeepingController {
 
     private boolean isSupervisorOrManager(String role) {
         String normalized = role == null ? "" : role.trim().toLowerCase();
-        return "manager".equals(normalized)
-                || "supervisor".equals(normalized)
-                || "staff supervisor".equals(normalized);
+        return normalized.contains("manager") || normalized.contains("supervisor");
     }
 }
