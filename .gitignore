@@ -28,3 +28,4 @@ replay_pid*
 /target
 target/classes/application.properties
 *.xml
+.vscode/launch.json
