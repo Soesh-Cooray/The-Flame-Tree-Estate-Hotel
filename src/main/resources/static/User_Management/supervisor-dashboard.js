@@ -250,7 +250,10 @@ async function submitSupervisorDecision(source, id, decision) {
 }
 
 function attachListeners() {
-  document.getElementById('refreshButton')?.addEventListener('click', loadUnifiedData);
+  document.getElementById('refreshButton')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.location.reload();
+  });
   document.getElementById('viewFilter')?.addEventListener('change', renderUnifiedTable);
   document.getElementById('departmentFilter')?.addEventListener('change', renderUnifiedTable);
   document.getElementById('searchInput')?.addEventListener('input', renderUnifiedTable);
