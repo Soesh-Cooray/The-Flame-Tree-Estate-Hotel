@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import project.flametreehotel.Model.inventory;
+import project.flametreehotel.Model.inventoryApprovalNotification;
+import project.flametreehotel.Services.inventoryApprovalNotificationService;
 import project.flametreehotel.Services.inventoryService;
 
 @RestController
@@ -21,6 +23,7 @@ import project.flametreehotel.Services.inventoryService;
 public class inventroyController {
 
     private final inventoryService service;
+    private final inventoryApprovalNotificationService notificationService;
 
     /**
      * GET /inventory/list
@@ -171,6 +174,15 @@ public class inventroyController {
             response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    /**
+     * GET /inventory/approved-low-stock-notifications
+     * Returns supplier notifications generated from manager-approved low stock items.
+     */
+    @GetMapping("/approved-low-stock-notifications")
+    public ResponseEntity<List<inventoryApprovalNotification>> getApprovedLowStockNotifications() {
+        return ResponseEntity.ok(notificationService.listPending());
     }
 }
 

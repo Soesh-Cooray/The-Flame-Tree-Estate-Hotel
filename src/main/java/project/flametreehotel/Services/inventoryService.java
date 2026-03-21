@@ -14,6 +14,7 @@ import project.flametreehotel.Repository.inventoryRepository;
 public class inventoryService {
 
     private final inventoryRepository repository;
+    private final inventoryApprovalNotificationService notificationService;
 
     public List<inventory> getAllItems() {
         List<inventory> items = repository.findAll();
@@ -96,7 +97,9 @@ public class inventoryService {
         inventory item = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item not found."));
         item.setStatus("Pending");
-        return repository.save(item);
+        inventory approvedItem = repository.save(item);
+        notificationService.createFromApprovedInventory(approvedItem, "Manager");
+        return approvedItem;
     }
 
     private static final int LOW_STOCK_BUFFER = 10;
