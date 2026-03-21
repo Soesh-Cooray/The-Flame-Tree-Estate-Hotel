@@ -110,20 +110,20 @@ public class housekeepingController {
 
     /**
      * POST /housekeeping/approve
-     * Body: { "id": 1, "approved": true, "role": "Manager" }
+     * Body: { "id": 1, "decision": "Approved|Rejected", "reassignedTo": "...", "rejectionReason": "...", "role": "Manager" }
      */
     @PostMapping("/approve")
     public ResponseEntity<Map<String, Object>> approveHousekeeping(@RequestBody Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
 
-        if (body.get("id") == null || body.get("approved") == null) {
+        if (body.get("id") == null) {
             response.put("success", false);
-            response.put("message", "Task ID and approved value are required.");
+            response.put("message", "Task ID is required.");
             return ResponseEntity.badRequest().body(response);
         }
 
         String role = String.valueOf(body.getOrDefault("role", "")).trim();
-        boolean allowed = "Manager".equalsIgnoreCase(role) || "Staff Supervisor".equalsIgnoreCase(role);
+        boolean allowed = isSupervisorOrManager(role);
         if (!allowed) {
             response.put("success", false);
             response.put("message", "Only manager or supervisor can approve tasks.");
@@ -131,12 +131,19 @@ public class housekeepingController {
         }
 
         int id = ((Number) body.get("id")).intValue();
-        boolean approved = Boolean.parseBoolean(String.valueOf(body.get("approved")));
+        String decision = String.valueOf(body.getOrDefault("decision", "")).trim();
+        if (decision.isBlank() && body.get("approved") != null) {
+            boolean approved = Boolean.parseBoolean(String.valueOf(body.get("approved")));
+            decision = approved ? "Approved" : "Rejected";
+        }
+
+        String reassignedTo = String.valueOf(body.getOrDefault("reassignedTo", "")).trim();
+        String rejectionReason = String.valueOf(body.getOrDefault("rejectionReason", "")).trim();
 
         try {
-            housekeeping updated = service.setApproval(id, approved);
+            housekeeping updated = service.supervisorDecision(id, decision, reassignedTo, rejectionReason);
             response.put("success", true);
-            response.put("message", "Task " + updated.getRequestId() + (approved ? " approved." : " unapproved."));
+            response.put("message", "Task " + updated.getRequestId() + " marked as " + updated.getSupervisorDecision() + ".");
             response.put("task", updated);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
@@ -172,5 +179,12 @@ public class housekeepingController {
             response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    private boolean isSupervisorOrManager(String role) {
+        String normalized = role == null ? "" : role.trim().toLowerCase();
+        return "manager".equals(normalized)
+                || "supervisor".equals(normalized)
+                || "staff supervisor".equals(normalized);
     }
 }

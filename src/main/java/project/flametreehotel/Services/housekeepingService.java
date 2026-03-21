@@ -12,6 +12,13 @@ import project.flametreehotel.Repository.housekeepingRepository;
 @RequiredArgsConstructor
 public class housekeepingService {
 
+    private static final String STATUS_PENDING = "Pending";
+    private static final String STATUS_IN_PROGRESS = "In Progress";
+    private static final String STATUS_COMPLETED = "Completed";
+    private static final String DECISION_PENDING_REVIEW = "Pending Review";
+    private static final String DECISION_APPROVED = "Approved";
+    private static final String DECISION_REJECTED = "Rejected";
+
     private final housekeepingRepository repository;
     private final guestService guestService;
 
@@ -29,8 +36,10 @@ public class housekeepingService {
         task.setRoom(room);
         task.setRequestType(requestType);
         task.setAssignedStaff(assignedStaff);
-        task.setTaskStatus(taskStatus);
+        task.setTaskStatus(normalizeTaskStatus(taskStatus));
         task.setApproved(false);
+        task.setSupervisorDecision(DECISION_PENDING_REVIEW);
+        task.setRejectionReason("");
 
         return repository.save(task);
     }
@@ -45,8 +54,10 @@ public class housekeepingService {
         task.setRoom(room);
         task.setRequestType(requestType);
         task.setAssignedStaff("Unassigned");
-        task.setTaskStatus("Assigned");
+        task.setTaskStatus(STATUS_PENDING);
         task.setApproved(false);
+        task.setSupervisorDecision(DECISION_PENDING_REVIEW);
+        task.setRejectionReason("");
 
         return repository.save(task);
     }
@@ -59,30 +70,102 @@ public class housekeepingService {
         existing.setRoom(room);
         existing.setRequestType(requestType);
         existing.setAssignedStaff(assignedStaff);
-        existing.setTaskStatus(taskStatus);
+        String normalizedStatus = normalizeTaskStatus(taskStatus);
+        existing.setTaskStatus(normalizedStatus);
         existing.setApproved(false);
+        existing.setSupervisorDecision(DECISION_PENDING_REVIEW);
+        existing.setRejectionReason("");
+
+        if (isGuestRequest(existing.getRequestId())) {
+            if (STATUS_IN_PROGRESS.equalsIgnoreCase(normalizedStatus) || STATUS_PENDING.equalsIgnoreCase(normalizedStatus)) {
+                guestService.updateStatusByRequestId(existing.getRequestId(), STATUS_IN_PROGRESS);
+            }
+            if (STATUS_COMPLETED.equalsIgnoreCase(normalizedStatus)) {
+                guestService.updateStatusByRequestId(existing.getRequestId(), STATUS_IN_PROGRESS);
+            }
+        }
 
         return repository.save(existing);
     }
 
-    public housekeeping setApproval(int id, boolean approved) {
+    public housekeeping supervisorDecision(int id, String decision, String reassignedTo, String rejectionReason) {
         housekeeping existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Task not found."));
 
-        if (!"Completed".equalsIgnoreCase(existing.getTaskStatus())) {
-            throw new RuntimeException("Only completed tasks can be approved.");
+        if (!STATUS_COMPLETED.equalsIgnoreCase(existing.getTaskStatus())) {
+            throw new RuntimeException("Only completed tasks can be reviewed by supervisor.");
         }
 
-        existing.setApproved(approved);
+        String normalizedDecision = normalizeDecision(decision);
+
+        if (DECISION_APPROVED.equalsIgnoreCase(normalizedDecision)) {
+            existing.setApproved(true);
+            existing.setSupervisorDecision(DECISION_APPROVED);
+            existing.setRejectionReason("");
+            housekeeping saved = repository.save(existing);
+
+            if (isGuestRequest(saved.getRequestId())) {
+                guestService.updateStatusByRequestId(saved.getRequestId(), STATUS_COMPLETED);
+            }
+            return saved;
+        }
+
+        if (reassignedTo == null || reassignedTo.isBlank()) {
+            throw new RuntimeException("Reassignment is required when rejecting a task.");
+        }
+        if (rejectionReason == null || rejectionReason.isBlank()) {
+            throw new RuntimeException("Rejection reason is required when rejecting a task.");
+        }
+
+        existing.setApproved(false);
+        existing.setSupervisorDecision(DECISION_REJECTED);
+        existing.setRejectionReason(rejectionReason.trim());
+        existing.setAssignedStaff(reassignedTo.trim());
+        existing.setTaskStatus(STATUS_IN_PROGRESS);
         housekeeping saved = repository.save(existing);
 
-        if (approved) {
-            guestService.updateStatusByRequestId(saved.getRequestId(), "Completed");
-        } else {
-            guestService.updateStatusByRequestId(saved.getRequestId(), "In Progress");
+        if (isGuestRequest(saved.getRequestId())) {
+            guestService.updateStatusByRequestId(saved.getRequestId(), STATUS_IN_PROGRESS);
         }
 
         return saved;
+    }
+
+    public housekeeping setApproval(int id, boolean approved) {
+        return supervisorDecision(id, approved ? DECISION_APPROVED : DECISION_REJECTED,
+                approved ? "" : "Unassigned", approved ? "" : "Legacy rejection");
+    }
+
+    private String normalizeTaskStatus(String taskStatus) {
+        String value = taskStatus == null ? "" : taskStatus.trim();
+        if (value.equalsIgnoreCase("Assigned")) {
+            return STATUS_PENDING;
+        }
+        if (value.equalsIgnoreCase("Pending")) {
+            return STATUS_PENDING;
+        }
+        if (value.equalsIgnoreCase(STATUS_IN_PROGRESS)) {
+            return STATUS_IN_PROGRESS;
+        }
+        if (value.equalsIgnoreCase(STATUS_COMPLETED)) {
+            return STATUS_COMPLETED;
+        }
+        throw new RuntimeException("Invalid task status. Use Pending, In Progress, or Completed.");
+    }
+
+    private String normalizeDecision(String decision) {
+        String value = decision == null ? "" : decision.trim();
+        if (DECISION_APPROVED.equalsIgnoreCase(value) || "approve".equalsIgnoreCase(value)) {
+            return DECISION_APPROVED;
+        }
+        if (DECISION_REJECTED.equalsIgnoreCase(value) || "reject".equalsIgnoreCase(value)) {
+            return DECISION_REJECTED;
+        }
+        throw new RuntimeException("Invalid decision. Use Approved or Rejected.");
+    }
+
+    private boolean isGuestRequest(String requestId) {
+        return requestId != null && requestId.trim().toUpperCase().startsWith("REQ-");
     }
 
     public void deleteTask(int id) {

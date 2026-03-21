@@ -10,4 +10,6 @@ public interface maintenanceRepository extends JpaRepository<maintenance, Intege
     Optional<maintenance> findByTicket(String ticket);
 
     Optional<maintenance> findByGuestRequestId(String guestRequestId);
+
+    java.util.List<maintenance> findByStatusIgnoreCase(String status);
 }

@@ -45,6 +45,76 @@ public class guestserviceController {
         return ResponseEntity.ok(service.getPendingRoutingRequests());
     }
 
+    @GetMapping("/supervisor/unified")
+    public ResponseEntity<Map<String, Object>> supervisorUnifiedPanel() {
+        Map<String, Object> response = new HashMap<>();
+
+        List<Map<String, Object>> guestPending = service.getAllRequests().stream()
+            .filter(request -> "Pending".equalsIgnoreCase(String.valueOf(request.getStatus())))
+            .map(request -> buildTaskMap(
+                "GUEST",
+                "Guest Service",
+                "Guest Request",
+                request.getId(),
+                request.getRequestId(),
+                request.getRoomName(),
+                request.getRequest(),
+                request.getRoutedModule() == null || request.getRoutedModule().isBlank() ? "Unassigned" : request.getRoutedModule(),
+                request.getStatus(),
+                "Pending",
+                ""))
+            .toList();
+
+        List<Map<String, Object>> housekeepingTasks = housekeepingService.getAllTasks().stream()
+            .map(task -> {
+                String decision = task.getSupervisorDecision() == null || task.getSupervisorDecision().isBlank()
+                    ? (task.isApproved() ? "Approved" : "Pending Review")
+                    : task.getSupervisorDecision();
+                return buildTaskMap(
+                    "HOUSEKEEPING",
+                    "Housekeeping",
+                    task.getRequestId() != null && task.getRequestId().startsWith("REQ-") ? "Guest Request" : "Department Task",
+                    task.getId(),
+                    task.getRequestId(),
+                    task.getRoom(),
+                    task.getRequestType(),
+                    task.getAssignedStaff(),
+                    task.getTaskStatus(),
+                    decision,
+                    task.getRejectionReason());
+            })
+            .toList();
+
+        List<Map<String, Object>> maintenanceTasks = maintenanceService.getAllTickets().stream()
+            .map(ticket -> {
+                String decision = ticket.getSupervisorDecision() == null || ticket.getSupervisorDecision().isBlank()
+                    ? (ticket.isApproved() ? "Approved" : "Pending Review")
+                    : ticket.getSupervisorDecision();
+                String code = ticket.getGuestRequestId() != null && !ticket.getGuestRequestId().isBlank()
+                    ? ticket.getGuestRequestId()
+                    : ticket.getTicket();
+                return buildTaskMap(
+                    "MAINTENANCE",
+                    "Maintenance",
+                    code != null && code.startsWith("REQ-") ? "Guest Request" : "Department Task",
+                    ticket.getId(),
+                    code == null ? "" : code,
+                    ticket.getLocation(),
+                    ticket.getIssue(),
+                    ticket.getAssignedTo(),
+                    ticket.getStatus(),
+                    decision,
+                    ticket.getRejectionReason());
+            })
+            .toList();
+
+        response.put("success", true);
+        response.put("guestPending", guestPending);
+        response.put("housekeepingTasks", housekeepingTasks);
+        response.put("maintenanceTasks", maintenanceTasks);
+        return ResponseEntity.ok(response);
+    }
+
     /**
      * POST /guestservice/route
      * Body: { "requestId": "REQ-001", "targetModule": "housekeeping|maintenance", "role": "Manager|Staff Supervisor" }
@@ -57,7 +127,7 @@ public class guestserviceController {
         String targetModule = String.valueOf(body.getOrDefault("targetModule", "")).trim().toLowerCase();
         String role = String.valueOf(body.getOrDefault("role", "")).trim();
 
-        boolean allowed = "Manager".equalsIgnoreCase(role) || "Staff Supervisor".equalsIgnoreCase(role);
+        boolean allowed = isSupervisorOrManager(role);
         if (!allowed) {
             response.put("success", false);
             response.put("message", "Only manager or supervisor can route guest requests.");
@@ -96,6 +166,7 @@ public class guestserviceController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
 
     /**
      * POST /guestservice/add
@@ -194,5 +265,34 @@ public class guestserviceController {
             response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    private Map<String, Object> buildTaskMap(String source, String department, String itemType, int id,
+            String taskCode, String roomOrLocation, String requestType, String assignedTo,
+            String status, String supervisorDecision, String rejectionReason) {
+        Map<String, Object> row = new HashMap<>();
+        row.put("source", nullSafe(source));
+        row.put("department", nullSafe(department));
+        row.put("itemType", nullSafe(itemType));
+        row.put("id", id);
+        row.put("taskCode", nullSafe(taskCode));
+        row.put("roomOrLocation", nullSafe(roomOrLocation));
+        row.put("requestType", nullSafe(requestType));
+        row.put("assignedTo", nullSafe(assignedTo));
+        row.put("status", nullSafe(status));
+        row.put("supervisorDecision", nullSafe(supervisorDecision));
+        row.put("rejectionReason", nullSafe(rejectionReason));
+        return row;
+    }
+
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private boolean isSupervisorOrManager(String role) {
+        String normalized = role == null ? "" : role.trim().toLowerCase();
+        return "manager".equals(normalized)
+                || "supervisor".equals(normalized)
+                || "staff supervisor".equals(normalized);
     }
 }
