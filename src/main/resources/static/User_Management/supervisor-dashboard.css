@@ -191,6 +191,16 @@ body {
   font-family: inherit;
 }
 
+.toolbar select {
+  background-color: #1f1a27;
+  color: var(--text-main);
+}
+
+.toolbar select option {
+  background-color: #1f1a27;
+  color: var(--text-main);
+}
+
 .panel-sub h3 {
   margin: 0 0 14px;
   color: var(--tone-gold);
