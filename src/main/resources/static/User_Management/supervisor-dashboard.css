@@ -323,6 +323,20 @@ body {
   color: var(--text-main);
 }
 
+.assigned-staff-select {
+  min-width: 210px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(6, 7, 21, 0.9);
+  color: var(--text-main);
+  padding: 7px 10px;
+}
+
+.assigned-staff-select option {
+  background: #0b0f25;
+  color: var(--text-main);
+}
+
 #taskActionMessage {
   min-height: 24px;
   margin: 12px 0 0;

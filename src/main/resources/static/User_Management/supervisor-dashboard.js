@@ -101,16 +101,36 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/"/g, '&quot;');
 }
 
-function staffSelectOptions(targetModule) {
-  const staff = state.assignmentStaff[targetModule] || [];
-  if (!staff.length) {
+function assignedStaffSelectOptions() {
+  const housekeepingOptions = (state.assignmentStaff.housekeeping || [])
+    .map((name) => `<option value="${escapeAttr(name)}" data-module="housekeeping">${escapeHtml(name)} (Housekeeping)</option>`)
+    .join('');
+
+  const maintenanceOptions = (state.assignmentStaff.maintenance || [])
+    .map((name) => `<option value="${escapeAttr(name)}" data-module="maintenance">${escapeHtml(name)} (Maintenance)</option>`)
+    .join('');
+
+  if (!housekeepingOptions && !maintenanceOptions) {
     return '<option value="">No available staff</option>';
   }
 
   return `
     <option value="">Select staff</option>
-    ${staff.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('')}
+    ${housekeepingOptions}
+    ${maintenanceOptions}
   `;
+}
+
+function assignedToCell(row) {
+  if (row.source === 'GUEST' && normalize(row.status) === 'pending') {
+    return `
+      <select class="assigned-staff-select" data-requestid="${escapeAttr(row.taskCode)}">
+        ${assignedStaffSelectOptions()}
+      </select>
+    `;
+  }
+
+  return escapeHtml(row.assignedTo);
 }
 
 function renderMetrics(rows) {
@@ -190,7 +210,7 @@ function renderAssignmentTable() {
       <td>${escapeHtml(row.department)}</td>
       <td>${escapeHtml(row.roomOrLocation)}</td>
       <td>${escapeHtml(row.requestType)}</td>
-      <td>${escapeHtml(row.assignedTo)}</td>
+      <td>${assignedToCell(row)}</td>
       <td><span class="status-pill ${statusClass(row.status)}">${escapeHtml(row.status)}</span></td>
       <td>${rowAssignmentActions(row)}</td>
     </tr>
@@ -230,14 +250,8 @@ function rowAssignmentActions(row) {
     const requestCode = escapeAttr(row.taskCode);
     return `
       <div class="row-actions">
-        <select class="assignment-route-select" data-requestid="${requestCode}">
-          <option value="housekeeping">Housekeeping</option>
-          <option value="maintenance">Maintenance</option>
-        </select>
-        <select class="assignment-staff-select" data-requestid="${requestCode}">
-          ${staffSelectOptions('housekeeping')}
-        </select>
-        <button class="approve-btn" data-action="route-selected" data-requestid="${requestCode}">Assign</button>
+        <button class="approve-btn" data-action="route-selected" data-route="housekeeping" data-requestid="${requestCode}">Assign Housekeeping</button>
+        <button class="approve-btn" data-action="route-selected" data-route="maintenance" data-requestid="${requestCode}">Assign Maintenance</button>
       </div>
     `;
   }
@@ -337,26 +351,6 @@ function attachListeners() {
   document.getElementById('departmentFilter')?.addEventListener('change', renderTaskQueues);
   document.getElementById('searchInput')?.addEventListener('input', renderTaskQueues);
 
-  document.addEventListener('change', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement) || !target.classList.contains('assignment-route-select')) {
-      return;
-    }
-
-    const requestId = target.dataset.requestid;
-    if (!requestId) {
-      return;
-    }
-
-    const rowActions = target.closest('.row-actions');
-    const staffSelect = rowActions?.querySelector('.assignment-staff-select');
-    if (!(staffSelect instanceof HTMLSelectElement)) {
-      return;
-    }
-
-    staffSelect.innerHTML = staffSelectOptions(target.value);
-  });
-
   document.addEventListener('click', async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement) || !target.classList.contains('approve-btn')) {
@@ -370,20 +364,26 @@ function attachListeners() {
 
     if (action === 'route-selected') {
       const requestId = target.dataset.requestid;
-      const rowActions = target.closest('.row-actions');
-      const routeSelect = rowActions?.querySelector('.assignment-route-select');
-      const staffSelect = rowActions?.querySelector('.assignment-staff-select');
+      const routeTo = target.dataset.route;
+      const row = target.closest('tr');
+      const staffSelect = row?.querySelector('.assigned-staff-select');
 
-      if (!(routeSelect instanceof HTMLSelectElement) || !(staffSelect instanceof HTMLSelectElement)) {
+      if (!(staffSelect instanceof HTMLSelectElement) || !routeTo) {
         showMessage('taskActionMessage', 'Could not read assignment inputs.');
         return;
       }
 
-      const routeTo = routeSelect.value;
       const assignedStaff = staffSelect.value;
+      const selectedOption = staffSelect.selectedOptions[0];
+      const selectedModule = selectedOption?.dataset?.module;
 
       if (!assignedStaff) {
         showMessage('taskActionMessage', `Please select a ${routeTo} staff member.`);
+        return;
+      }
+
+      if (selectedModule !== routeTo) {
+        showMessage('taskActionMessage', `Selected staff is not in ${routeTo}. Please choose a ${routeTo} staff member.`);
         return;
       }
 
