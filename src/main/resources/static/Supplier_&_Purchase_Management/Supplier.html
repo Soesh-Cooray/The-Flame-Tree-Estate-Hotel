@@ -101,7 +101,13 @@
       <input id="poId" type="text" placeholder="Auto-generated" readonly required />
 
       <label for="supplierName">Supplier</label>
-      <input id="supplierName" type="text" placeholder="Supplier name" required />
+      <select id="supplierName" required>
+        <option value="">Select Supplier</option>
+        <option value="CleanNest Essentials">CleanNest Essentials (toiletries)</option>
+        <option value="LuxeStay Suppliers">LuxeStay Suppliers (bathroom essentials)</option>
+        <option value="ComfortCotton Lanka">ComfortCotton Lanka (bedding)</option>
+        <option value="GreenLeaf Produce">GreenLeaf Produce (consumable items)</option>
+      </select>
 
       <label for="itemName">Item</label>
       <input id="itemName" type="text" placeholder="e.g., Bath Towels" required />
