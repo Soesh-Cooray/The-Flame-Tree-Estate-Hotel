@@ -251,27 +251,6 @@ body::before {
   color: rgba(243, 237, 248, 0.7);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--text-muted);
-}
-
-.remember {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.remember input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--tone-amber);
-}
-
 .link {
   color: var(--tone-gold);
   font-weight: 700;

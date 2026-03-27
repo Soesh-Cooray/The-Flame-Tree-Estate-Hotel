@@ -138,31 +138,41 @@ button {
 
 .status-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 0 0 20px 0;
 }
 
 .status-card {
+  background: rgba(43, 34, 51, 0.7);
   border: 1px solid var(--stroke);
   border-radius: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+  text-align: center;
 }
 
 .status-card h3 {
-  margin: 0;
-  font-size: 1rem;
+  margin: 0 0 8px 0;
+  color: var(--tone-gold);
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }
 
 .metric {
-  margin: 8px 0;
-  font-size: 1.7rem;
+  margin: 0;
+  font-size: 2.4rem;
   font-weight: 800;
-  color: var(--tone-gold);
+  background: linear-gradient(120deg, #e472b8, #c892ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.status-card p {
-  margin: 0;
+.status-card > p:last-child {
+  margin: 8px 0 0 0;
+  font-size: 0.82rem;
   color: var(--text-muted);
   line-height: 1.45;
 }
@@ -306,5 +316,9 @@ th {
 @media (max-width: 720px) {
   .topbar {
     flex-direction: column;
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
