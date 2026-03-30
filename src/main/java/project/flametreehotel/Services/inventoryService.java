@@ -57,6 +57,7 @@ public class inventoryService {
         newItem.setMinLevel(minLevel);
         newItem.setDamaged(0);
         newItem.setMissing(0);
+        newItem.setApproved(false);
         newItem.setStatus(computeStatus(inStock, minLevel, 0, 0));
 
         return repository.save(newItem);
@@ -74,6 +75,7 @@ public class inventoryService {
         existing.setMinLevel(minLevel);
         existing.setDamaged(damaged);
         existing.setMissing(missing);
+        existing.setApproved(false);
         existing.setStatus(computeStatus(inStock, minLevel, damaged, missing));
 
         return repository.save(existing);
@@ -96,6 +98,7 @@ public class inventoryService {
     public inventory approveItem(int id) {
         inventory item = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item not found."));
+        item.setApproved(true);
         item.setStatus("Pending");
         inventory approvedItem = repository.save(item);
         notificationService.createFromApprovedInventory(approvedItem, "Manager");

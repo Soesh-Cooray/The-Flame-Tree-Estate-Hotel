@@ -1,5 +1,6 @@
 package project.flametreehotel.Model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -18,5 +19,7 @@ public class inventory {
     private int minLevel;
     private int damaged;
     private int missing;
+    @Column(nullable = false)
+    private boolean approved = false;
     private String status;
 }
