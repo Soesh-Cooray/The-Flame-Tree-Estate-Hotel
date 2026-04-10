@@ -20,6 +20,7 @@ public class inventoryApprovalNotificationService {
 
     private static final String STATUS_PENDING = "Pending";
     private static final String STATUS_ORDERED = "Ordered";
+    private static final String STATUS_RECEIVED = "Received";
 
     private final inventoryApprovalNotificationRepository repository;
     private final ordersRepository ordersRepository;
@@ -71,6 +72,32 @@ public class inventoryApprovalNotificationService {
                 .toList();
     }
 
+    public List<Map<String, Object>> listReceivedWithOrderDetails() {
+        return repository.findByNotificationStatusOrderByReceivedAtDesc(STATUS_RECEIVED).stream()
+                .map(notification -> {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("id", notification.getId());
+                    row.put("inventoryId", notification.getInventoryId());
+                    row.put("itemName", notification.getItemName());
+                    row.put("category", notification.getCategory());
+                    row.put("approvedAt", notification.getApprovedAt());
+                    row.put("approvedBy", notification.getApprovedBy());
+                    row.put("receivedAt", notification.getReceivedAt());
+                    row.put("linkedOrderId", notification.getLinkedOrderId());
+
+                    orders linkedOrder = null;
+                    if (notification.getLinkedOrderId() != null) {
+                        linkedOrder = ordersRepository.findById(notification.getLinkedOrderId()).orElse(null);
+                    }
+
+                    row.put("orderedQty", linkedOrder == null ? 0 : linkedOrder.getQty());
+                    row.put("supplier", linkedOrder == null ? "" : linkedOrder.getSupplier());
+                    row.put("poid", linkedOrder == null ? "" : linkedOrder.getPoid());
+                    return row;
+                })
+                .toList();
+    }
+
     public void markOrdered(int notificationId, int orderId) {
         inventoryApprovalNotification notification = repository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notification not found."));
@@ -81,6 +108,23 @@ public class inventoryApprovalNotificationService {
 
         notification.setNotificationStatus(STATUS_ORDERED);
         notification.setLinkedOrderId(orderId);
+        repository.save(notification);
+    }
+
+    public void markReceivedByOrderId(int orderId) {
+        inventoryApprovalNotification notification = repository.findFirstByLinkedOrderIdOrderByIdDesc(orderId)
+                .orElseThrow(() -> new RuntimeException("Notification not found for the given order."));
+
+        if (STATUS_RECEIVED.equals(notification.getNotificationStatus())) {
+            return;
+        }
+
+        if (!STATUS_ORDERED.equals(notification.getNotificationStatus())) {
+            throw new RuntimeException("Notification is not in ordered state.");
+        }
+
+        notification.setNotificationStatus(STATUS_RECEIVED);
+        notification.setReceivedAt(LocalDateTime.now());
         repository.save(notification);
     }
 

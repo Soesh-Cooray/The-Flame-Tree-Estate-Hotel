@@ -194,5 +194,14 @@ public class inventroyController {
     public ResponseEntity<List<Map<String, Object>>> getOrderedLowStockNotifications() {
         return ResponseEntity.ok(notificationService.listOrderedWithOrderDetails());
     }
+
+    /**
+     * GET /inventory/received-low-stock-notifications
+     * Returns low stock requests where the linked supplier PO was marked complete.
+     */
+    @GetMapping("/received-low-stock-notifications")
+    public ResponseEntity<List<Map<String, Object>>> getReceivedLowStockNotifications() {
+        return ResponseEntity.ok(notificationService.listReceivedWithOrderDetails());
+    }
 }
 

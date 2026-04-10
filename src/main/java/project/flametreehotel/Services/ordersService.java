@@ -52,6 +52,9 @@ public class ordersService {
 
         if (notificationId != null) {
             notificationService.markOrdered(notificationId, saved.getId());
+            if ("Complete".equalsIgnoreCase(status)) {
+                notificationService.markReceivedByOrderId(saved.getId());
+            }
         }
 
         return saved;
@@ -60,6 +63,8 @@ public class ordersService {
     public orders updateOrder(int id, String poid, String supplier, String item, int qty, String status) {
         orders existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found."));
+
+        String previousStatus = existing.getStatus();
 
         repository.findByPoid(poid)
                 .filter(order -> order.getId() != id)
@@ -72,8 +77,14 @@ public class ordersService {
         existing.setItem(item);
         existing.setQty(qty);
         existing.setStatus(status);
+        orders updated = repository.save(existing);
 
-        return repository.save(existing);
+        boolean movedToComplete = !"Complete".equalsIgnoreCase(previousStatus) && "Complete".equalsIgnoreCase(status);
+        if (movedToComplete) {
+            notificationService.markReceivedByOrderId(updated.getId());
+        }
+
+        return updated;
     }
 
     public void deleteOrder(int id) {

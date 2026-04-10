@@ -21,6 +21,7 @@ public class inventoryApprovalNotification {
     private int minLevel;
     private int suggestedQty;
     private LocalDateTime approvedAt;
+    private LocalDateTime receivedAt;
     private String approvedBy;
     private String notificationStatus;
     private Integer linkedOrderId;
