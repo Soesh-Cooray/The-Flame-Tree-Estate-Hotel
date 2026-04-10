@@ -18,6 +18,14 @@ const supplierApprovalFeed = document.getElementById('supplierApprovalFeed');
 const supplierToastStack = document.getElementById('supplierToastStack');
 const supplierClearAlertsBtn = document.getElementById('supplierClearAlertsBtn');
 
+function broadcastInventoryUpdate() {
+  try {
+    localStorage.setItem('inventoryUpdateSignal', String(Date.now()));
+  } catch {
+    // Storage may be blocked; polling still updates notifications.
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   Promise.all([loadAndRender(), loadNotifications()]);
   attachEventListeners();
@@ -386,6 +394,9 @@ async function handleAddSubmit(e) {
     document.getElementById('addPoForm').reset();
     selectedNotificationId = null;
     showMessage(data.message || 'Purchase order added successfully!');
+    if (payload.notificationId) {
+      broadcastInventoryUpdate();
+    }
     await Promise.all([loadAndRender(), loadNotifications()]);
   } catch {
     showMessage('Error adding purchase order.');

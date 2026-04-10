@@ -184,5 +184,15 @@ public class inventroyController {
     public ResponseEntity<List<inventoryApprovalNotification>> getApprovedLowStockNotifications() {
         return ResponseEntity.ok(notificationService.listPending());
     }
+
+    /**
+     * GET /inventory/ordered-low-stock-notifications
+     * Returns low stock approvals that have been converted to purchase orders,
+     * including ordered quantity details for manager and inventory notifications.
+     */
+    @GetMapping("/ordered-low-stock-notifications")
+    public ResponseEntity<List<Map<String, Object>>> getOrderedLowStockNotifications() {
+        return ResponseEntity.ok(notificationService.listOrderedWithOrderDetails());
+    }
 }
 

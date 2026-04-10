@@ -50,6 +50,8 @@ let dashboardPollTimer = null;
 let pollInFlight = false;
 let hasLowStockBaseline = false;
 let knownLowStockKeys = new Set();
+let hasSupplierPoBaseline = false;
+let knownSupplierPoNotificationIds = new Set();
 let unseenNotificationCount = 0;
 
 const notificationBadge = document.getElementById('notificationBadge');
@@ -197,6 +199,47 @@ async function checkLowStockTransitions() {
   }
 }
 
+async function checkSupplierPoNotifications() {
+  try {
+    const res = await fetch('/inventory/ordered-low-stock-notifications');
+    if (!res.ok) {
+      return;
+    }
+
+    const orderedNotifications = await res.json();
+    const currentIds = new Set(orderedNotifications.map((notification) => Number(notification.id)));
+
+    if (!hasSupplierPoBaseline) {
+      knownSupplierPoNotificationIds = currentIds;
+      hasSupplierPoBaseline = true;
+      return;
+    }
+
+    const newSupplierPoNotifications = orderedNotifications.filter(
+      (notification) => !knownSupplierPoNotificationIds.has(Number(notification.id))
+    );
+
+    newSupplierPoNotifications.forEach((notification) => {
+      const itemName = String(notification?.itemName || 'Inventory item');
+      const orderedQty = Number(notification?.orderedQty || 0);
+      const supplier = String(notification?.supplier || 'Supplier team');
+      const poid = String(notification?.poid || '').trim();
+      const poLabel = poid ? ` (${poid})` : '';
+      const message = `${supplier} created a PO${poLabel} for ${itemName} with quantity ${orderedQty}.`;
+
+      unseenNotificationCount += 1;
+      addNotificationFeedItem(message);
+      showToast('Supplier PO Created', message);
+      tryShowBrowserNotification('Supplier PO Created', message);
+    });
+
+    updateNotificationBadge();
+    knownSupplierPoNotificationIds = currentIds;
+  } catch (err) {
+    console.error('Could not load supplier PO notifications', err);
+  }
+}
+
 async function pollDashboardLiveUpdates() {
   if (pollInFlight) {
     return;
@@ -207,7 +250,8 @@ async function pollDashboardLiveUpdates() {
     await Promise.all([
       loadDashboardMetrics(),
       loadApprovalTables(),
-      checkLowStockTransitions()
+      checkLowStockTransitions(),
+      checkSupplierPoNotifications()
     ]);
   } finally {
     pollInFlight = false;

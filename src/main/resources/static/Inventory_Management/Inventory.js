@@ -30,6 +30,8 @@ const updateDamagedInput = document.getElementById('updateDamaged');
 const updateMissingInput = document.getElementById('updateMissing');
 const inventoryApprovalBadge = document.getElementById('inventoryApprovalBadge');
 const inventoryApprovalList = document.getElementById('inventoryApprovalList');
+const inventorySupplierPoBadge = document.getElementById('inventorySupplierPoBadge');
+const inventorySupplierPoList = document.getElementById('inventorySupplierPoList');
 const inventoryToastStack = document.getElementById('inventoryToastStack');
 const inventoryClearAlertsBtn = document.getElementById('inventoryClearAlertsBtn');
 
@@ -39,8 +41,12 @@ const MAX_APPROVAL_FEED_ITEMS = 8;
 let inventoryAlertTimer = null;
 let hasApprovalBaseline = false;
 let knownApprovalIds = new Set();
+let hasSupplierPoBaseline = false;
+let knownSupplierPoNotificationIds = new Set();
 let clearedApprovalIds = new Set();
+let clearedSupplierPoNotificationIds = new Set();
 let latestApprovalNotifications = [];
+let latestSupplierPoNotifications = [];
 
 const ITEM_CATEGORY_MAP = {
   'Bath towels': 'Bathroom Essentials',
@@ -212,6 +218,36 @@ function renderApprovalFeed(notifications) {
   });
 }
 
+function renderSupplierPoFeed(notifications) {
+  if (inventorySupplierPoBadge) {
+    inventorySupplierPoBadge.textContent = String(notifications.length);
+  }
+
+  if (!inventorySupplierPoList) {
+    return;
+  }
+
+  inventorySupplierPoList.innerHTML = '';
+  if (notifications.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No supplier PO confirmations yet.';
+    inventorySupplierPoList.appendChild(li);
+    return;
+  }
+
+  notifications.slice(0, MAX_APPROVAL_FEED_ITEMS).forEach((notification) => {
+    const itemName = String(notification?.itemName || 'Inventory item');
+    const supplier = String(notification?.supplier || 'Supplier team');
+    const orderedQty = Number(notification?.orderedQty || 0);
+    const poid = String(notification?.poid || '').trim();
+    const poLabel = poid ? `${poid} • ` : '';
+
+    const li = document.createElement('li');
+    li.textContent = `${poLabel}${supplier} ordered ${orderedQty} units for ${itemName} at ${formatDateTime(notification?.approvedAt)}.`;
+    inventorySupplierPoList.appendChild(li);
+  });
+}
+
 async function loadManagerApprovalNotifications() {
   const res = await fetch('/inventory/approved-low-stock-notifications');
   if (!res.ok) {
@@ -253,13 +289,59 @@ async function pollManagerApprovals() {
   }
 }
 
+async function pollSupplierPoNotificationsForInventory() {
+  try {
+    const res = await fetch('/inventory/ordered-low-stock-notifications');
+    if (!res.ok) {
+      return;
+    }
+
+    const orderedNotifications = await res.json();
+    latestSupplierPoNotifications = orderedNotifications;
+    const visibleSupplierPoNotifications = orderedNotifications.filter(
+      (notification) => !clearedSupplierPoNotificationIds.has(Number(notification.id))
+    );
+    renderSupplierPoFeed(visibleSupplierPoNotifications);
+    const currentIds = new Set(orderedNotifications.map((notification) => Number(notification.id)));
+
+    if (!hasSupplierPoBaseline) {
+      knownSupplierPoNotificationIds = currentIds;
+      hasSupplierPoBaseline = true;
+      return;
+    }
+
+    const newSupplierPoNotifications = orderedNotifications.filter(
+      (notification) => !knownSupplierPoNotificationIds.has(Number(notification.id))
+    );
+
+    newSupplierPoNotifications.forEach((notification) => {
+      const itemName = String(notification?.itemName || 'Inventory item');
+      const orderedQty = Number(notification?.orderedQty || 0);
+      const supplier = String(notification?.supplier || 'Supplier team');
+      showInventoryToast(
+        'Supplier PO Created',
+        `${supplier} created a PO for ${itemName} with ordered quantity ${orderedQty}.`
+      );
+    });
+
+    knownSupplierPoNotificationIds = currentIds;
+  } catch (err) {
+    showMessage('Error loading supplier order notifications: ' + err.message);
+  }
+}
+
 function clearApprovalAlerts() {
   latestApprovalNotifications.forEach((notification) => {
     clearedApprovalIds.add(Number(notification.id));
   });
 
+  latestSupplierPoNotifications.forEach((notification) => {
+    clearedSupplierPoNotificationIds.add(Number(notification.id));
+  });
+
   renderApprovalFeed([]);
   updateApprovalBadge(0);
+  renderSupplierPoFeed([]);
 }
 
 function startApprovalPolling() {
@@ -270,7 +352,10 @@ function startApprovalPolling() {
   pollManagerApprovals();
   inventoryAlertTimer = window.setInterval(() => {
     pollManagerApprovals();
+    pollSupplierPoNotificationsForInventory();
   }, INVENTORY_ALERT_POLL_MS);
+
+  pollSupplierPoNotificationsForInventory();
 
   window.addEventListener('beforeunload', () => {
     if (inventoryAlertTimer !== null) {

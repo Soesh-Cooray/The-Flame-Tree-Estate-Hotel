@@ -260,6 +260,12 @@ button {
   color: var(--text-main);
 }
 
+.approval-subsection {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(92, 73, 45, 0.16);
+}
+
 .inventory-toast-stack {
   position: fixed;
   right: 16px;
