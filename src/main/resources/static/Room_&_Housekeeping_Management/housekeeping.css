@@ -1,13 +1,13 @@
 :root {
-  --bg-dark: #141218;
-  --bg-accent: #2b2233;
+  --bg-dark: #f6f1e8;
+  --bg-accent: #ece2d4;
   --tone-amber: #e472b8;
   --tone-gold: #c892ff;
-  --tone-cream: #f2eaf9;
-  --text-main: #f3edf8;
-  --text-muted: #b9adc7;
-  --stroke: rgba(255, 255, 255, 0.12);
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  --tone-cream: #3b2c4f;
+  --text-main: #2f2419;
+  --text-muted: #6f624f;
+  --stroke: rgba(92, 73, 45, 0.2);
+  --shadow: 0 18px 46px rgba(83, 63, 36, 0.16);
   --radius: 16px;
 }
 
@@ -22,7 +22,7 @@ body {
   color: var(--text-main);
   background: radial-gradient(circle at 20% 20%, rgba(228, 114, 184, 0.2), transparent 40%),
     radial-gradient(circle at 80% 10%, rgba(200, 146, 255, 0.18), transparent 35%),
-    linear-gradient(135deg, #121015, #211b29 45%, #121015 90%);
+    linear-gradient(145deg, #f9f5ee, #f2eadf 48%, #f8f3eb 100%);
   padding: 28px 18px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -79,7 +79,7 @@ h1 {
 }
 
 .panel {
-  background: rgba(20, 18, 24, 0.94);
+  background: rgba(255, 252, 246, 0.95);
   border: 1px solid var(--stroke);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -109,8 +109,8 @@ textarea {
   border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--tone-cream);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-main);
   font: inherit;
 }
 
@@ -123,14 +123,15 @@ textarea:focus {
 }
 
 option {
-  color: #0e1a1b;
+  color: var(--text-main);
+  background: #fffdfa;
 }
 
 button {
   border: none;
   border-radius: 10px;
   padding: 11px 12px;
-  color: #1a1320;
+  color: #fff9f2;
   font-weight: 800;
   background: linear-gradient(120deg, #e472b8, #c892ff);
   cursor: pointer;
@@ -188,7 +189,7 @@ th {
 }
 
 .summary-card {
-  background: rgba(43, 34, 51, 0.7);
+  background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 16px;
@@ -237,9 +238,9 @@ th {
   overflow-y: auto;
   border: 1px solid rgba(228, 114, 184, 0.4);
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(43, 34, 51, 0.98), rgba(30, 20, 40, 0.98));
-  color: var(--tone-cream);
-  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, rgba(255, 252, 246, 0.96), rgba(255, 249, 242, 0.98));
+  color: var(--text-main);
+  box-shadow: 0 18px 46px rgba(83, 63, 36, 0.16);
   padding: 0;
 }
 
@@ -254,20 +255,22 @@ th {
 .task-dialog h3 {
   margin-top: 0;
   margin-bottom: 20px;
-  color: var(--tone-cream);
+  color: var(--text-main);
   font-size: 1.1rem;
 }
 
 .task-dialog input,
 .task-dialog select {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(228, 114, 184, 0.3);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--stroke);
+  color: var(--text-main);
 }
 
 .task-dialog input:focus,
 .task-dialog select:focus {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(228, 114, 184, 0.6);
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(228, 114, 184, 0.65);
+  box-shadow: 0 0 0 3px rgba(228, 114, 184, 0.16);
 }
 
 .dialog-actions {
@@ -281,9 +284,9 @@ th {
 }
 
 .secondary-btn {
-  background: rgba(200, 146, 255, 0.2) !important;
-  color: var(--tone-gold) !important;
-  border: 1px solid rgba(200, 146, 255, 0.4);
+  background: rgba(200, 146, 255, 0.12) !important;
+  color: #c892ff !important;
+  border: 1px solid rgba(200, 146, 255, 0.36);
 }
 
 .secondary-btn:hover {
@@ -315,8 +318,8 @@ th {
   margin-top: 12px;
   padding: 12px;
   border-radius: 8px;
-  background: rgba(228, 114, 184, 0.1);
-  color: var(--tone-cream);
+  background: rgba(228, 114, 184, 0.12);
+  color: #c892ff;
   display: none;
 }
 
