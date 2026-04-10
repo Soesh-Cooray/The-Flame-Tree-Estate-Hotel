@@ -44,6 +44,14 @@ const ITEM_CATEGORY_MAP = {
   'Water bottles': 'Consumable items'
 };
 
+function broadcastInventoryUpdate() {
+  try {
+    localStorage.setItem('inventoryUpdateSignal', String(Date.now()));
+  } catch {
+    // Storage may be blocked in some browser modes; polling still works.
+  }
+}
+
 function normalizeItemName(value) {
   return String(value || '').trim().toLowerCase();
 }
@@ -240,6 +248,9 @@ inventoryTableBody.addEventListener('click', async (event) => {
       });
       const data = await res.json();
       showMessage(data.message || 'Item deleted.');
+      if (data.success) {
+        broadcastInventoryUpdate();
+      }
       await loadAndRender();
     } catch {
       showMessage('Error deleting item.');
@@ -279,6 +290,7 @@ addItemForm.addEventListener('submit', async (event) => {
     addItemForm.reset();
     addItemDialog.close();
     showMessage(data.message || 'Item added.');
+    broadcastInventoryUpdate();
     await loadAndRender();
   } catch {
     showMessage('Error adding item.');
@@ -333,6 +345,7 @@ updateItemForm.addEventListener('submit', async (event) => {
     updateItemForm.reset();
     updateItemDialog.close();
     showMessage(data.message || 'Item updated.');
+    broadcastInventoryUpdate();
     await loadAndRender();
   } catch {
     showMessage('Error updating item.');

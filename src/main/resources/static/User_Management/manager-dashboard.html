@@ -28,6 +28,16 @@
         <a href="#suppliers">Suppliers &amp; Purchase</a>
       </nav>
 
+      <section class="notification-widget" aria-live="polite">
+        <div class="notification-head">
+          <h2>Live Alerts</h2>
+          <span id="notificationBadge" class="notification-badge" hidden>0</span>
+        </div>
+        <p id="notificationPermissionText" class="notification-note">Enable browser alerts for instant low-stock updates.</p>
+        <button type="button" id="notificationPermissionBtn" class="notification-btn">Enable Browser Alerts</button>
+        <ul id="notificationList" class="notification-list"></ul>
+      </section>
+
       <a class="back-link" href="index.html">Logout</a>
     </aside>
 
@@ -203,6 +213,8 @@
       </section>
     </main>
   </div>
+
+  <div id="dashboardToastStack" class="dashboard-toast-stack" aria-live="polite"></div>
 
   <script src="manager-dashboard.js"></script>
 </body>

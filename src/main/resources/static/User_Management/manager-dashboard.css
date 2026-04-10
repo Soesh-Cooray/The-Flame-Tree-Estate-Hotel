@@ -112,6 +112,131 @@ body {
   width: fit-content;
 }
 
+.notification-widget {
+  margin: 4px 0 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  display: grid;
+  gap: 10px;
+}
+
+.notification-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.notification-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--tone-cream);
+}
+
+.notification-badge {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #fff9f2;
+  background: linear-gradient(120deg, #d8528f, #a952ff);
+}
+
+.notification-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.notification-btn {
+  width: 100%;
+  font-size: 0.84rem;
+  padding: 9px 12px;
+}
+
+.notification-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.notification-list li {
+  border: 1px solid rgba(92, 73, 45, 0.18);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.notification-list p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  line-height: 1.35;
+}
+
+.notification-time {
+  margin-top: 4px;
+  display: inline-block;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.dashboard-toast-stack {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 120;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.dashboard-toast {
+  border: 1px solid rgba(228, 114, 184, 0.38);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 251, 245, 0.98);
+  box-shadow: 0 14px 30px rgba(74, 50, 27, 0.22);
+  animation: toast-slide-in 0.22s ease-out;
+}
+
+.dashboard-toast strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.86rem;
+  color: var(--tone-cream);
+}
+
+.dashboard-toast p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-main);
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .content {
   display: grid;
   gap: 16px;
@@ -371,5 +496,10 @@ button.danger {
 
   .content {
     width: 100%;
+  }
+
+  .dashboard-toast-stack {
+    right: 12px;
+    bottom: 12px;
   }
 }

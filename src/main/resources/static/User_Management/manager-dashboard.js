@@ -43,6 +43,229 @@ function escapeHtml(value) {
 }
 
 const currentRole = localStorage.getItem('currentUserRole') || 'Manager';
+const DASHBOARD_POLL_INTERVAL_MS = 5000;
+const MAX_NOTIFICATION_ITEMS = 8;
+
+let dashboardPollTimer = null;
+let pollInFlight = false;
+let hasLowStockBaseline = false;
+let knownLowStockKeys = new Set();
+let unseenNotificationCount = 0;
+
+const notificationBadge = document.getElementById('notificationBadge');
+const notificationList = document.getElementById('notificationList');
+const notificationPermissionBtn = document.getElementById('notificationPermissionBtn');
+const notificationPermissionText = document.getElementById('notificationPermissionText');
+const dashboardToastStack = document.getElementById('dashboardToastStack');
+
+function nowLabel() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function updateNotificationBadge() {
+  if (!notificationBadge) {
+    return;
+  }
+
+  if (unseenNotificationCount <= 0) {
+    notificationBadge.hidden = true;
+    notificationBadge.textContent = '0';
+    return;
+  }
+
+  notificationBadge.hidden = false;
+  notificationBadge.textContent = String(unseenNotificationCount);
+}
+
+function markNotificationsSeen() {
+  unseenNotificationCount = 0;
+  updateNotificationBadge();
+}
+
+function addNotificationFeedItem(text) {
+  if (!notificationList) {
+    return;
+  }
+
+  const item = document.createElement('li');
+  item.innerHTML = `<p>${escapeHtml(text)}</p><span class="notification-time">${escapeHtml(nowLabel())}</span>`;
+  notificationList.prepend(item);
+
+  while (notificationList.children.length > MAX_NOTIFICATION_ITEMS) {
+    notificationList.removeChild(notificationList.lastElementChild);
+  }
+}
+
+function showToast(title, text) {
+  if (!dashboardToastStack) {
+    return;
+  }
+
+  const toast = document.createElement('article');
+  toast.className = 'dashboard-toast';
+  toast.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(text)}</p>`;
+  dashboardToastStack.appendChild(toast);
+
+  window.setTimeout(() => {
+    toast.remove();
+  }, 4500);
+}
+
+function tryShowBrowserNotification(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    return;
+  }
+  new Notification(title, { body });
+}
+
+function updateNotificationPermissionUI() {
+  if (!notificationPermissionBtn || !notificationPermissionText) {
+    return;
+  }
+
+  if (!('Notification' in window)) {
+    notificationPermissionBtn.disabled = true;
+    notificationPermissionBtn.textContent = 'Browser Alerts Unavailable';
+    notificationPermissionText.textContent = 'This browser does not support native notifications.';
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    notificationPermissionBtn.disabled = true;
+    notificationPermissionBtn.textContent = 'Browser Alerts Enabled';
+    notificationPermissionText.textContent = 'Desktop alerts are active for low-stock updates.';
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    notificationPermissionBtn.disabled = true;
+    notificationPermissionBtn.textContent = 'Browser Alerts Blocked';
+    notificationPermissionText.textContent = 'Browser alerts are blocked. You can still see in-page alerts.';
+    return;
+  }
+
+  notificationPermissionBtn.disabled = false;
+  notificationPermissionBtn.textContent = 'Enable Browser Alerts';
+  notificationPermissionText.textContent = 'Enable browser alerts for instant low-stock updates.';
+}
+
+function getInventoryKey(item) {
+  if (item?.id !== undefined && item?.id !== null) {
+    return `id:${item.id}`;
+  }
+  return `name:${String(item?.item || '').trim().toLowerCase()}|category:${String(item?.category || '').trim().toLowerCase()}`;
+}
+
+async function checkLowStockTransitions() {
+  try {
+    const res = await fetch('/inventory/list');
+    if (!res.ok) {
+      return;
+    }
+
+    const inventoryItems = await res.json();
+    const lowStockItems = inventoryItems.filter(
+      (item) => String(item?.status || '').toLowerCase() === 'low stock'
+    );
+
+    const currentKeys = new Set(lowStockItems.map(getInventoryKey));
+
+    if (!hasLowStockBaseline) {
+      knownLowStockKeys = currentKeys;
+      hasLowStockBaseline = true;
+      return;
+    }
+
+    const newLowStockItems = lowStockItems.filter((item) => !knownLowStockKeys.has(getInventoryKey(item)));
+
+    newLowStockItems.forEach((item) => {
+      const stock = Number(item?.inStock || 0);
+      const minLevel = Number(item?.minLevel || 0);
+      const itemName = String(item?.item || 'Inventory item');
+      const message = `${itemName} reached low stock (${stock} / ${minLevel}).`;
+
+      unseenNotificationCount += 1;
+      addNotificationFeedItem(message);
+      showToast('Low Stock Alert', message);
+      tryShowBrowserNotification('Low Stock Alert', message);
+    });
+
+    updateNotificationBadge();
+    knownLowStockKeys = currentKeys;
+  } catch (err) {
+    console.error('Could not check low stock transitions', err);
+  }
+}
+
+async function pollDashboardLiveUpdates() {
+  if (pollInFlight) {
+    return;
+  }
+
+  pollInFlight = true;
+  try {
+    await Promise.all([
+      loadDashboardMetrics(),
+      loadApprovalTables(),
+      checkLowStockTransitions()
+    ]);
+  } finally {
+    pollInFlight = false;
+  }
+}
+
+function startLivePolling() {
+  if (dashboardPollTimer !== null) {
+    return;
+  }
+
+  dashboardPollTimer = window.setInterval(() => {
+    pollDashboardLiveUpdates();
+  }, DASHBOARD_POLL_INTERVAL_MS);
+
+  window.addEventListener('beforeunload', () => {
+    if (dashboardPollTimer !== null) {
+      window.clearInterval(dashboardPollTimer);
+      dashboardPollTimer = null;
+    }
+  });
+}
+
+function setupNotificationInteractions() {
+  if (notificationPermissionBtn) {
+    notificationPermissionBtn.addEventListener('click', async () => {
+      if (!('Notification' in window) || Notification.permission !== 'default') {
+        updateNotificationPermissionUI();
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      updateNotificationPermissionUI();
+
+      if (permission === 'granted') {
+        showToast('Browser Alerts Enabled', 'You will now receive desktop low-stock notifications.');
+      }
+    });
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      markNotificationsSeen();
+    }
+  });
+
+  if (notificationList) {
+    notificationList.addEventListener('mouseenter', markNotificationsSeen);
+  }
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'inventoryUpdateSignal') {
+      pollDashboardLiveUpdates();
+    }
+  });
+
+  updateNotificationPermissionUI();
+}
 
 async function loadApprovalTables() {
   try {
@@ -273,6 +496,9 @@ async function loadUsers() {
 
 loadUsers();
 initializeDashboard();
+setupNotificationInteractions();
+checkLowStockTransitions();
+startLivePolling();
 
 // ── Create User Account ──────────────────────────────────────────────────
 document.getElementById('createUserForm').addEventListener('submit', async (e) => {
