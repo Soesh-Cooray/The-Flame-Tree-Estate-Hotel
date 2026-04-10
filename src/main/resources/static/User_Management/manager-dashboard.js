@@ -56,7 +56,11 @@ let hasReceivedPoBaseline = false;
 let knownReceivedPoNotificationIds = new Set();
 let unseenNotificationCount = 0;
 
-const notificationBadge = document.getElementById('notificationBadge');
+const alertsBellBtn = document.getElementById('alertsBellBtn');
+const alertsBellCounter = document.getElementById('alertsBellCounter');
+const notificationsModal = document.getElementById('notificationsModal');
+const closeNotificationsBtn = document.getElementById('closeNotificationsBtn');
+const clearAlertsBtn = document.getElementById('clearAlertsBtn');
 const notificationList = document.getElementById('notificationList');
 const notificationPermissionBtn = document.getElementById('notificationPermissionBtn');
 const notificationPermissionText = document.getElementById('notificationPermissionText');
@@ -67,18 +71,18 @@ function nowLabel() {
 }
 
 function updateNotificationBadge() {
-  if (!notificationBadge) {
+  if (!alertsBellCounter) {
     return;
   }
 
   if (unseenNotificationCount <= 0) {
-    notificationBadge.hidden = true;
-    notificationBadge.textContent = '0';
+    alertsBellCounter.hidden = true;
+    alertsBellCounter.textContent = '0';
     return;
   }
 
-  notificationBadge.hidden = false;
-  notificationBadge.textContent = String(unseenNotificationCount);
+  alertsBellCounter.hidden = false;
+  alertsBellCounter.textContent = String(unseenNotificationCount);
 }
 
 function markNotificationsSeen() {
@@ -319,6 +323,49 @@ function startLivePolling() {
 }
 
 function setupNotificationInteractions() {
+  // Bell button - open modal
+  if (alertsBellBtn) {
+    alertsBellBtn.addEventListener('click', () => {
+      if (notificationsModal) {
+        notificationsModal.hidden = false;
+        markNotificationsSeen();
+      }
+    });
+  }
+
+  // Close button - close modal
+  if (closeNotificationsBtn) {
+    closeNotificationsBtn.addEventListener('click', () => {
+      if (notificationsModal) {
+        notificationsModal.hidden = true;
+      }
+    });
+  }
+
+  // Clear alerts button
+  if (clearAlertsBtn) {
+    clearAlertsBtn.addEventListener('click', () => {
+      if (notificationList) {
+        notificationList.innerHTML = '';
+      }
+      unseenNotificationCount = 0;
+      updateNotificationBadge();
+      showToast('Alerts Cleared', 'All notifications have been cleared.');
+      if (notificationsModal) {
+        notificationsModal.hidden = true;
+      }
+    });
+  }
+
+  // Close modal when clicking outside
+  if (notificationsModal) {
+    notificationsModal.addEventListener('click', (e) => {
+      if (e.target === notificationsModal) {
+        notificationsModal.hidden = true;
+      }
+    });
+  }
+
   if (notificationPermissionBtn) {
     notificationPermissionBtn.addEventListener('click', async () => {
       if (!('Notification' in window) || Notification.permission !== 'default') {
@@ -340,10 +387,6 @@ function setupNotificationInteractions() {
       markNotificationsSeen();
     }
   });
-
-  if (notificationList) {
-    notificationList.addEventListener('mouseenter', markNotificationsSeen);
-  }
 
   window.addEventListener('storage', (event) => {
     if (event.key === 'inventoryUpdateSignal') {
@@ -565,19 +608,94 @@ async function loadUsers() {
     const users = await res.json();
 
     const datalist = document.getElementById('usernames-list');
-    datalist.innerHTML = users.map(u => `<option value="${u.username}">`).join('');
+    if (datalist) {
+      datalist.innerHTML = users.map(u => `<option value="${u.username}">`).join('');
+    }
+
+    const roleOptions = [
+      'Manager',
+      'Housekeeping Staff',
+      'Inventory/Store Manager',
+      'Maintenance Staff',
+      'Staff Supervisor',
+      'Front Desk / Reception Staff',
+      'Supplier &amp; Purchase Management'
+    ];
 
     const tbody = document.getElementById('userTableBody');
     tbody.innerHTML = users.map(u => `
       <tr>
-        <td>${u.username}</td>
-        <td style="color:var(--text-muted)">${u.staffEmail || '—'}</td>
-        <td>${u.role || '—'}</td>
+        <td>${escapeHtml(u.username)}</td>
+        <td style="color:var(--text-muted)">${escapeHtml(u.staffEmail || '—')}</td>
+        <td>
+          <select class="user-role-select" data-username="${escapeHtml(u.username)}">
+            ${roleOptions.map(role => `<option value="${role}" ${u.role === role ? 'selected' : ''}>${role}</option>`).join('')}
+          </select>
+        </td>
         <td><span class="status-pill ${u.status ? 'active' : 'inactive'}">${u.status ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="user-action-btn user-status-btn" data-username="${escapeHtml(u.username)}" data-active="${u.status ? 'true' : 'false'}" data-action="${u.status ? 'deactivate' : 'activate'}">
+            ${u.status ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
       </tr>
     `).join('');
+
+    // Add event listeners for role dropdowns
+    document.querySelectorAll('.user-role-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const username = e.target.dataset.username;
+        const newRole = e.target.value;
+        await assignUserRole(username, newRole);
+      });
+    });
+
+    // Add event listeners for status buttons
+    document.querySelectorAll('.user-status-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const username = e.target.dataset.username;
+        const action = e.target.dataset.action;
+        const active = action === 'activate';
+        await setUserStatus(username, active);
+      });
+    });
   } catch (e) {
     console.error('Could not load users', e);
+  }
+}
+
+async function assignUserRole(username, role) {
+  try {
+    const data = await apiPut('/auth/assign-role', { username, role });
+    if (!data.success) {
+      alert(data.message || 'Failed to assign role.');
+      loadUsers();
+      return;
+    }
+    showToast('Role Updated', `${username} role has been changed to ${role}`);
+    loadUsers();
+  } catch (err) {
+    console.error('Error assigning role:', err);
+    alert('An error occurred while assigning the role.');
+    loadUsers();
+  }
+}
+
+async function setUserStatus(username, active) {
+  try {
+    const data = await apiPut('/auth/status', { username, active: String(active) });
+    if (!data.success) {
+      alert(data.message || 'Failed to update account status.');
+      loadUsers();
+      return;
+    }
+    const action = active ? 'activated' : 'deactivated';
+    showToast('Account Status Updated', `${username} account has been ${action}.`);
+    loadUsers();
+  } catch (err) {
+    console.error('Error updating status:', err);
+    alert('An error occurred while updating the account status.');
+    loadUsers();
   }
 }
 
@@ -609,47 +727,7 @@ document.getElementById('createUserForm').addEventListener('submit', async (e) =
   }
 });
 
-// ── Assign Role ──────────────────────────────────────────────────────────
-document.getElementById('assignRoleForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const msg = document.getElementById('assignMsg');
-  const btn = e.target.querySelector('button[type="submit"]');
-  btn.disabled = true;
-
-  const data = await apiPut('/auth/assign-role', {
-    username: document.getElementById('staffUser').value.trim(),
-    role: document.getElementById('role').value
-  });
-
-  showMsg(msg, data.message, data.success);
-  btn.disabled = false;
-  if (data.success) {
-    e.target.reset();
-    loadUsers();
-  }
-});
-
 // ── Deactivate / Activate Account ────────────────────────────────────────
-async function setAccountStatus(active) {
-  const username = document.getElementById('deactivateUser').value.trim();
-  const msg = document.getElementById('statusMsg');
-
-  if (!username) {
-    showMsg(msg, 'Please enter a username.', false);
-    return;
-  }
-
-  const data = await apiPut('/auth/status', { username, active: String(active) });
-  showMsg(msg, data.message, data.success);
-  if (data.success) {
-    document.getElementById('statusForm').reset();
-    loadUsers();
-  }
-}
-
-document.getElementById('deactivateBtn').addEventListener('click', () => setAccountStatus(false));
-document.getElementById('activateBtn').addEventListener('click', () => setAccountStatus(true));
-
 document.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement) || !target.classList.contains('approve-btn')) return;

@@ -28,22 +28,21 @@
         <a href="#suppliers">Suppliers &amp; Purchase</a>
       </nav>
 
-      <section class="notification-widget" aria-live="polite">
-        <div class="notification-head">
-          <h2>Live Alerts</h2>
-          <span id="notificationBadge" class="notification-badge" hidden>0</span>
-        </div>
-        <p id="notificationPermissionText" class="notification-note">Enable browser alerts for instant low-stock updates.</p>
-        <button type="button" id="notificationPermissionBtn" class="notification-btn">Enable Browser Alerts</button>
-        <ul id="notificationList" class="notification-list"></ul>
-      </section>
-
       <a class="back-link" href="index.html">Logout</a>
     </aside>
 
     <main class="content">
       <section class="panel" id="overview">
-        <h2>Hotel Operations Overview</h2>
+        <div class="overview-header">
+          <h2>Hotel Operations Overview</h2>
+          <button type="button" id="alertsBellBtn" class="alerts-bell-btn" aria-label="View notifications">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span id="alertsBellCounter" class="alerts-bell-counter" hidden>0</span>
+          </button>
+        </div>
         <div class="kpi-grid">
           <article class="kpi"><h3>Open Guest Requests</h3><p id="overviewOpenGuestRequestsMetric">0</p></article>
           <article class="kpi"><h3>Rooms Pending Housekeeping</h3><p id="overviewPendingHousekeepingMetric">0</p></article>
@@ -52,70 +51,63 @@
         </div>
       </section>
 
+      <!-- Notifications Modal Popup -->
+      <div id="notificationsModal" class="notifications-modal" hidden>
+        <div class="notifications-modal-content">
+          <div class="notifications-modal-header">
+            <h2>Live Alerts</h2>
+            <button type="button" id="closeNotificationsBtn" class="modal-close-btn" aria-label="Close">×</button>
+          </div>
+          <div class="notifications-modal-body">
+            <p id="notificationPermissionText" class="notification-note">Enable browser alerts for instant updates.</p>
+            <button type="button" id="notificationPermissionBtn" class="notification-btn">Enable Browser Alerts</button>
+            <ul id="notificationList" class="notification-list"></ul>
+          </div>
+          <div class="notifications-modal-footer">
+            <button type="button" id="clearAlertsBtn" class="clear-alerts-btn">Clear All Alerts</button>
+          </div>
+        </div>
+      </div>
+      <!-- End Notifications Modal -->
+
+
       <section class="panel" id="access-control">
         <h2>User Access Control (Manager Core)</h2>
-        <div class="two-col">
-          <form class="form" id="createUserForm">
-            <h3>Create User Account</h3>
-            <label for="newUsername">Username</label>
-            <input id="newUsername" type="text" placeholder="first.last" required />
-            <label for="newEmail">Staff Email</label>
-            <input id="newEmail" type="email" placeholder="name@flametreehotel.local" required />
-            <label for="tempPassword">Temporary Password</label>
-            <input id="tempPassword" type="password" placeholder="••••••••" required />
-            <label for="newRole">Role</label>
-            <select id="newRole" required>
-              <option value="">Choose role</option>
-              <option value="Manager">Manager</option>
-              <option value="Housekeeping Staff">Housekeeping Staff</option>
-              <option value="Inventory/Store Manager">Inventory/Store Manager</option>
-              <option value="Maintenance Staff">Maintenance Staff</option>
-              <option value="Staff Supervisor">Staff Supervisor</option>
-              <option value="Front Desk / Reception Staff">Front Desk / Reception Staff</option>
-              <option value="Supplier &amp; Purchase Management">Supplier &amp; Purchase Management</option>
-            </select>
-            <p class="form-msg" id="createMsg"></p>
-            <button type="submit">Create Account</button>
-          </form>
-
-          <form class="form" id="assignRoleForm">
-            <h3>Assign Role &amp; Permissions</h3>
-            <label for="staffUser">Select User</label>
-            <input id="staffUser" type="text" placeholder="Search by username" list="usernames-list" required />
-            <datalist id="usernames-list"></datalist>
-            <label for="role">Role</label>
-            <select id="role" required>
-              <option value="">Choose role</option>
-              <option value="Manager">Manager</option>
-              <option value="Housekeeping Staff">Housekeeping Staff</option>
-              <option value="Inventory/Store Manager">Inventory/Store Manager</option>
-              <option value="Maintenance Staff">Maintenance Staff</option>
-              <option value="Staff Supervisor">Staff Supervisor</option>
-              <option value="Front Desk / Reception Staff">Front Desk / Reception Staff</option>
-              <option value="Supplier &amp; Purchase Management">Supplier &amp; Purchase Management</option>
-            </select>
-            <p class="form-msg" id="assignMsg"></p>
-            <button type="submit">Assign Role</button>
-          </form>
-        </div>
-
-        <form class="form form-inline" id="statusForm">
-          <h3>Manage Account Status</h3>
-          <label for="deactivateUser">Username</label>
-          <input id="deactivateUser" type="text" placeholder="Enter username" list="usernames-list" required />
-          <label for="reason">Reason (optional note)</label>
-          <textarea id="reason" rows="2" placeholder="Reason for status change"></textarea>
-          <p class="form-msg" id="statusMsg"></p>
-          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-            <button type="button" id="deactivateBtn" class="danger">Deactivate Account</button>
-            <button type="button" id="activateBtn">Activate Account</button>
-          </div>
+        <form class="form" id="createUserForm">
+          <h3>Create User Account</h3>
+          <label for="newUsername">Username</label>
+          <input id="newUsername" type="text" placeholder="first.last" required />
+          <label for="newEmail">Staff Email</label>
+          <input id="newEmail" type="email" placeholder="name@flametreehotel.local" required />
+          <label for="tempPassword">Temporary Password</label>
+          <input id="tempPassword" type="password" placeholder="••••••••" required />
+          <label for="newRole">Role</label>
+          <select id="newRole" required>
+            <option value="">Choose role</option>
+            <option value="Manager">Manager</option>
+            <option value="Housekeeping Staff">Housekeeping Staff</option>
+            <option value="Inventory/Store Manager">Inventory/Store Manager</option>
+            <option value="Maintenance Staff">Maintenance Staff</option>
+            <option value="Staff Supervisor">Staff Supervisor</option>
+            <option value="Front Desk / Reception Staff">Front Desk / Reception Staff</option>
+            <option value="Supplier &amp; Purchase Management">Supplier &amp; Purchase Management</option>
+          </select>
+          <p class="form-msg" id="createMsg"></p>
+          <button type="submit">Create Account</button>
         </form>
 
         <div class="panel-sub" id="userListSection">
           <h3>All Users</h3>
           <table class="user-table" id="userTable">
-            <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody id="userTableBody"></tbody>
           </table>
         </div>
