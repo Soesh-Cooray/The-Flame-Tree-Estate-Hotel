@@ -439,6 +439,7 @@ async function handleUpdateSubmit(e) {
     document.getElementById('updatePoDialog').close();
     document.getElementById('updatePoForm').reset();
     showMessage(data.message || 'Purchase order updated successfully!');
+    broadcastInventoryUpdate();
     await loadAndRender();
   } catch {
     showMessage('Error updating purchase order.');

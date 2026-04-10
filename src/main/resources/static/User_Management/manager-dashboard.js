@@ -52,6 +52,8 @@ let hasLowStockBaseline = false;
 let knownLowStockKeys = new Set();
 let hasSupplierPoBaseline = false;
 let knownSupplierPoNotificationIds = new Set();
+let hasReceivedPoBaseline = false;
+let knownReceivedPoNotificationIds = new Set();
 let unseenNotificationCount = 0;
 
 const notificationBadge = document.getElementById('notificationBadge');
@@ -240,6 +242,46 @@ async function checkSupplierPoNotifications() {
   }
 }
 
+async function checkReceivedPoNotifications() {
+  try {
+    const res = await fetch('/inventory/received-low-stock-notifications');
+    if (!res.ok) {
+      return;
+    }
+
+    const receivedNotifications = await res.json();
+    const currentIds = new Set(receivedNotifications.map((notification) => Number(notification.id)));
+
+    if (!hasReceivedPoBaseline) {
+      knownReceivedPoNotificationIds = currentIds;
+      hasReceivedPoBaseline = true;
+      return;
+    }
+
+    const newReceivedNotifications = receivedNotifications.filter(
+      (notification) => !knownReceivedPoNotificationIds.has(Number(notification.id))
+    );
+
+    newReceivedNotifications.forEach((notification) => {
+      const itemName = String(notification?.itemName || 'Inventory item');
+      const orderedQty = Number(notification?.orderedQty || 0);
+      const poid = String(notification?.poid || '').trim();
+      const poLabel = poid ? ` (${poid})` : '';
+      const message = `Order received${poLabel}: ${itemName} quantity ${orderedQty} has been received.`;
+
+      unseenNotificationCount += 1;
+      addNotificationFeedItem(message);
+      showToast('Order Received', message);
+      tryShowBrowserNotification('Order Received', message);
+    });
+
+    updateNotificationBadge();
+    knownReceivedPoNotificationIds = currentIds;
+  } catch (err) {
+    console.error('Could not load received PO notifications', err);
+  }
+}
+
 async function pollDashboardLiveUpdates() {
   if (pollInFlight) {
     return;
@@ -251,7 +293,8 @@ async function pollDashboardLiveUpdates() {
       loadDashboardMetrics(),
       loadApprovalTables(),
       checkLowStockTransitions(),
-      checkSupplierPoNotifications()
+      checkSupplierPoNotifications(),
+      checkReceivedPoNotifications()
     ]);
   } finally {
     pollInFlight = false;

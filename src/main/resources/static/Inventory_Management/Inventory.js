@@ -32,6 +32,8 @@ const inventoryApprovalBadge = document.getElementById('inventoryApprovalBadge')
 const inventoryApprovalList = document.getElementById('inventoryApprovalList');
 const inventorySupplierPoBadge = document.getElementById('inventorySupplierPoBadge');
 const inventorySupplierPoList = document.getElementById('inventorySupplierPoList');
+const inventoryReceivedPoBadge = document.getElementById('inventoryReceivedPoBadge');
+const inventoryReceivedPoList = document.getElementById('inventoryReceivedPoList');
 const inventoryToastStack = document.getElementById('inventoryToastStack');
 const inventoryClearAlertsBtn = document.getElementById('inventoryClearAlertsBtn');
 
@@ -43,10 +45,14 @@ let hasApprovalBaseline = false;
 let knownApprovalIds = new Set();
 let hasSupplierPoBaseline = false;
 let knownSupplierPoNotificationIds = new Set();
+let hasReceivedPoBaseline = false;
+let knownReceivedPoNotificationIds = new Set();
 let clearedApprovalIds = new Set();
 let clearedSupplierPoNotificationIds = new Set();
+let clearedReceivedPoNotificationIds = new Set();
 let latestApprovalNotifications = [];
 let latestSupplierPoNotifications = [];
+let latestReceivedPoNotifications = [];
 
 const ITEM_CATEGORY_MAP = {
   'Bath towels': 'Bathroom Essentials',
@@ -248,6 +254,37 @@ function renderSupplierPoFeed(notifications) {
   });
 }
 
+function renderReceivedPoFeed(notifications) {
+  if (inventoryReceivedPoBadge) {
+    inventoryReceivedPoBadge.textContent = String(notifications.length);
+  }
+
+  if (!inventoryReceivedPoList) {
+    return;
+  }
+
+  inventoryReceivedPoList.innerHTML = '';
+  if (notifications.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No completed order receipts yet.';
+    inventoryReceivedPoList.appendChild(li);
+    return;
+  }
+
+  notifications.slice(0, MAX_APPROVAL_FEED_ITEMS).forEach((notification) => {
+    const itemName = String(notification?.itemName || 'Inventory item');
+    const supplier = String(notification?.supplier || 'Supplier team');
+    const orderedQty = Number(notification?.orderedQty || 0);
+    const poid = String(notification?.poid || '').trim();
+    const poLabel = poid ? `${poid} • ` : '';
+    const receivedAt = formatDateTime(notification?.receivedAt);
+
+    const li = document.createElement('li');
+    li.textContent = `${poLabel}${itemName} received from ${supplier} (${orderedQty} units) at ${receivedAt}.`;
+    inventoryReceivedPoList.appendChild(li);
+  });
+}
+
 async function loadManagerApprovalNotifications() {
   const res = await fetch('/inventory/approved-low-stock-notifications');
   if (!res.ok) {
@@ -330,6 +367,48 @@ async function pollSupplierPoNotificationsForInventory() {
   }
 }
 
+async function pollReceivedPoNotificationsForInventory() {
+  try {
+    const res = await fetch('/inventory/received-low-stock-notifications');
+    if (!res.ok) {
+      return;
+    }
+
+    const receivedNotifications = await res.json();
+    latestReceivedPoNotifications = receivedNotifications;
+    const visibleReceivedNotifications = receivedNotifications.filter(
+      (notification) => !clearedReceivedPoNotificationIds.has(Number(notification.id))
+    );
+    renderReceivedPoFeed(visibleReceivedNotifications);
+    const currentIds = new Set(receivedNotifications.map((notification) => Number(notification.id)));
+
+    if (!hasReceivedPoBaseline) {
+      knownReceivedPoNotificationIds = currentIds;
+      hasReceivedPoBaseline = true;
+      return;
+    }
+
+    const newReceivedNotifications = receivedNotifications.filter(
+      (notification) => !knownReceivedPoNotificationIds.has(Number(notification.id))
+    );
+
+    newReceivedNotifications.forEach((notification) => {
+      const itemName = String(notification?.itemName || 'Inventory item');
+      const orderedQty = Number(notification?.orderedQty || 0);
+      const poid = String(notification?.poid || '').trim();
+      const poLabel = poid ? ` (${poid})` : '';
+      showInventoryToast(
+        'Order Received',
+        `Order received${poLabel}: ${itemName} quantity ${orderedQty} has been received.`
+      );
+    });
+
+    knownReceivedPoNotificationIds = currentIds;
+  } catch (err) {
+    showMessage('Error loading received order notifications: ' + err.message);
+  }
+}
+
 function clearApprovalAlerts() {
   latestApprovalNotifications.forEach((notification) => {
     clearedApprovalIds.add(Number(notification.id));
@@ -339,9 +418,14 @@ function clearApprovalAlerts() {
     clearedSupplierPoNotificationIds.add(Number(notification.id));
   });
 
+  latestReceivedPoNotifications.forEach((notification) => {
+    clearedReceivedPoNotificationIds.add(Number(notification.id));
+  });
+
   renderApprovalFeed([]);
   updateApprovalBadge(0);
   renderSupplierPoFeed([]);
+  renderReceivedPoFeed([]);
 }
 
 function startApprovalPolling() {
@@ -353,9 +437,11 @@ function startApprovalPolling() {
   inventoryAlertTimer = window.setInterval(() => {
     pollManagerApprovals();
     pollSupplierPoNotificationsForInventory();
+    pollReceivedPoNotificationsForInventory();
   }, INVENTORY_ALERT_POLL_MS);
 
   pollSupplierPoNotificationsForInventory();
+  pollReceivedPoNotificationsForInventory();
 
   window.addEventListener('beforeunload', () => {
     if (inventoryAlertTimer !== null) {
