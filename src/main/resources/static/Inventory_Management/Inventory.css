@@ -202,6 +202,107 @@ button {
   color: var(--text-muted);
   line-height: 1.45;
 }
+
+.approval-alerts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.approval-alerts-note {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.approval-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.approval-badge-wrap {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+#inventoryApprovalBadge {
+  color: #e472b8;
+  background: rgba(228, 114, 184, 0.16);
+  border: 1px solid rgba(228, 114, 184, 0.38);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.clear-alerts-btn {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  border-radius: 8px;
+}
+
+.approval-alert-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.approval-alert-list li {
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+
+.inventory-toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 120;
+  width: min(360px, calc(100vw - 24px));
+  display: grid;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.inventory-toast {
+  border: 1px solid rgba(228, 114, 184, 0.38);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 251, 245, 0.98);
+  box-shadow: 0 14px 30px rgba(74, 50, 27, 0.22);
+  animation: inventory-toast-in 0.22s ease-out;
+}
+
+.inventory-toast strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.86rem;
+  color: var(--tone-cream);
+}
+
+.inventory-toast p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-main);
+}
+
+@keyframes inventory-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
   .table-actions {
     display: flex;
     justify-content: flex-end;
@@ -348,5 +449,15 @@ th {
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .approval-alerts-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .approval-alert-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 }

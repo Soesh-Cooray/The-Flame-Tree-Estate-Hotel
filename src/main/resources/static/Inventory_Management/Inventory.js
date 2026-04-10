@@ -28,6 +28,19 @@ const updateStockInput = document.getElementById('updateStock');
 const updateMinLevelInput = document.getElementById('updateMinLevel');
 const updateDamagedInput = document.getElementById('updateDamaged');
 const updateMissingInput = document.getElementById('updateMissing');
+const inventoryApprovalBadge = document.getElementById('inventoryApprovalBadge');
+const inventoryApprovalList = document.getElementById('inventoryApprovalList');
+const inventoryToastStack = document.getElementById('inventoryToastStack');
+const inventoryClearAlertsBtn = document.getElementById('inventoryClearAlertsBtn');
+
+const INVENTORY_ALERT_POLL_MS = 5000;
+const MAX_APPROVAL_FEED_ITEMS = 8;
+
+let inventoryAlertTimer = null;
+let hasApprovalBaseline = false;
+let knownApprovalIds = new Set();
+let clearedApprovalIds = new Set();
+let latestApprovalNotifications = [];
 
 const ITEM_CATEGORY_MAP = {
   'Bath towels': 'Bathroom Essentials',
@@ -148,6 +161,136 @@ function showMessage(message) {
 
 function showPopup(message) {
   window.alert(message);
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
+}
+
+function showInventoryToast(title, message) {
+  if (!inventoryToastStack) {
+    return;
+  }
+
+  const toast = document.createElement('article');
+  toast.className = 'inventory-toast';
+  toast.innerHTML = `<strong>${title}</strong><p>${message}</p>`;
+  inventoryToastStack.appendChild(toast);
+
+  window.setTimeout(() => {
+    toast.remove();
+  }, 4200);
+}
+
+function updateApprovalBadge(currentVisibleCount) {
+  if (!inventoryApprovalBadge) {
+    return;
+  }
+  inventoryApprovalBadge.textContent = String(currentVisibleCount);
+}
+
+function renderApprovalFeed(notifications) {
+  if (!inventoryApprovalList) {
+    return;
+  }
+
+  inventoryApprovalList.innerHTML = '';
+  if (notifications.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No approvals received yet.';
+    inventoryApprovalList.appendChild(li);
+    return;
+  }
+
+  notifications.slice(0, MAX_APPROVAL_FEED_ITEMS).forEach((notification) => {
+    const li = document.createElement('li');
+    li.textContent = `Manager approved ${notification.itemName} for restocking at ${formatDateTime(notification.approvedAt)}.`;
+    inventoryApprovalList.appendChild(li);
+  });
+}
+
+async function loadManagerApprovalNotifications() {
+  const res = await fetch('/inventory/approved-low-stock-notifications');
+  if (!res.ok) {
+    throw new Error('Failed to load manager approval notifications.');
+  }
+
+  return res.json();
+}
+
+async function pollManagerApprovals() {
+  try {
+    const notifications = await loadManagerApprovalNotifications();
+    latestApprovalNotifications = notifications;
+    const currentIds = new Set(notifications.map((notification) => Number(notification.id)));
+
+    if (!hasApprovalBaseline) {
+      knownApprovalIds = currentIds;
+      hasApprovalBaseline = true;
+      const visibleAtStart = notifications.filter((notification) => !clearedApprovalIds.has(Number(notification.id)));
+      renderApprovalFeed(visibleAtStart);
+      updateApprovalBadge(visibleAtStart.length);
+      return;
+    }
+
+    const newNotifications = notifications.filter((notification) => !knownApprovalIds.has(Number(notification.id)));
+    newNotifications.forEach((notification) => {
+      showInventoryToast(
+        'Manager Approval Received',
+        `${notification.itemName} low-stock request was approved by ${notification.approvedBy || 'Manager'}.`
+      );
+    });
+
+    const visibleNotifications = notifications.filter((notification) => !clearedApprovalIds.has(Number(notification.id)));
+    renderApprovalFeed(visibleNotifications);
+    updateApprovalBadge(visibleNotifications.length);
+    knownApprovalIds = currentIds;
+  } catch (err) {
+    showMessage('Error loading manager approvals: ' + err.message);
+  }
+}
+
+function clearApprovalAlerts() {
+  latestApprovalNotifications.forEach((notification) => {
+    clearedApprovalIds.add(Number(notification.id));
+  });
+
+  renderApprovalFeed([]);
+  updateApprovalBadge(0);
+}
+
+function startApprovalPolling() {
+  if (inventoryAlertTimer !== null) {
+    return;
+  }
+
+  pollManagerApprovals();
+  inventoryAlertTimer = window.setInterval(() => {
+    pollManagerApprovals();
+  }, INVENTORY_ALERT_POLL_MS);
+
+  window.addEventListener('beforeunload', () => {
+    if (inventoryAlertTimer !== null) {
+      window.clearInterval(inventoryAlertTimer);
+      inventoryAlertTimer = null;
+    }
+  });
+
+  if (inventoryApprovalList) {
+    inventoryApprovalList.addEventListener('mouseenter', () => {
+      const visibleNotifications = latestApprovalNotifications.filter(
+        (notification) => !clearedApprovalIds.has(Number(notification.id))
+      );
+      updateApprovalBadge(visibleNotifications.length);
+    });
+  }
+
+  if (inventoryClearAlertsBtn) {
+    inventoryClearAlertsBtn.addEventListener('click', clearApprovalAlerts);
+  }
 }
 
 async function loadAndRender() {
@@ -353,3 +496,4 @@ updateItemForm.addEventListener('submit', async (event) => {
 });
 
 loadAndRender();
+startApprovalPolling();

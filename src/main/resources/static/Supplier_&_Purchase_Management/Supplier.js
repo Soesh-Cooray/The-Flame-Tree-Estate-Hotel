@@ -4,10 +4,24 @@
  */
 
 let selectedNotificationId = null;
+const SUPPLIER_ALERT_POLL_MS = 5000;
+const MAX_SUPPLIER_FEED_ITEMS = 8;
+
+let supplierAlertTimer = null;
+let supplierBaselineSet = false;
+let knownSupplierApprovalIds = new Set();
+let clearedSupplierApprovalIds = new Set();
+let latestSupplierNotifications = [];
+
+const supplierApprovalBadge = document.getElementById('supplierApprovalBadge');
+const supplierApprovalFeed = document.getElementById('supplierApprovalFeed');
+const supplierToastStack = document.getElementById('supplierToastStack');
+const supplierClearAlertsBtn = document.getElementById('supplierClearAlertsBtn');
 
 document.addEventListener('DOMContentLoaded', () => {
   Promise.all([loadAndRender(), loadNotifications()]);
   attachEventListeners();
+  startSupplierApprovalPolling();
 });
 
 async function loadAndRender() {
@@ -79,8 +93,124 @@ async function loadNotifications() {
     if (!res.ok) throw new Error('Failed to load low stock notifications.');
     const notifications = await res.json();
     renderNotifications(notifications);
+    return notifications;
   } catch (err) {
     showMessage('Error loading low stock notifications: ' + err.message);
+    return [];
+  }
+}
+
+function renderSupplierApprovalFeed(notifications) {
+  if (!supplierApprovalFeed) {
+    return;
+  }
+
+  supplierApprovalFeed.innerHTML = '';
+  if (notifications.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No live alerts yet.';
+    supplierApprovalFeed.appendChild(li);
+    return;
+  }
+
+  notifications.slice(0, MAX_SUPPLIER_FEED_ITEMS).forEach((notification) => {
+    const li = document.createElement('li');
+    li.textContent = `${notification.itemName} was approved by ${notification.approvedBy || 'Manager'} at ${formatDateTime(notification.approvedAt)}.`;
+    supplierApprovalFeed.appendChild(li);
+  });
+}
+
+function updateSupplierApprovalBadge(currentVisibleCount) {
+  if (!supplierApprovalBadge) {
+    return;
+  }
+  supplierApprovalBadge.textContent = String(currentVisibleCount);
+}
+
+function showSupplierToast(title, text) {
+  if (!supplierToastStack) {
+    return;
+  }
+
+  const toast = document.createElement('article');
+  toast.className = 'supplier-toast';
+  toast.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(text)}</p>`;
+  supplierToastStack.appendChild(toast);
+
+  window.setTimeout(() => {
+    toast.remove();
+  }, 4200);
+}
+
+async function pollSupplierApprovals() {
+  const notifications = await loadNotifications();
+  latestSupplierNotifications = notifications;
+  const currentIds = new Set(notifications.map((notification) => Number(notification.id)));
+
+  if (!supplierBaselineSet) {
+    knownSupplierApprovalIds = currentIds;
+    supplierBaselineSet = true;
+    const visibleAtStart = notifications.filter(
+      (notification) => !clearedSupplierApprovalIds.has(Number(notification.id))
+    );
+    renderSupplierApprovalFeed(visibleAtStart);
+    updateSupplierApprovalBadge(visibleAtStart.length);
+    return;
+  }
+
+  const newApprovals = notifications.filter((notification) => !knownSupplierApprovalIds.has(Number(notification.id)));
+  newApprovals.forEach((notification) => {
+    showSupplierToast(
+      'Manager Approval Received',
+      `${notification.itemName} low-stock request is approved and ready for PO creation.`
+    );
+  });
+
+  const visibleNotifications = notifications.filter(
+    (notification) => !clearedSupplierApprovalIds.has(Number(notification.id))
+  );
+  renderSupplierApprovalFeed(visibleNotifications);
+  updateSupplierApprovalBadge(visibleNotifications.length);
+  knownSupplierApprovalIds = currentIds;
+}
+
+function clearSupplierAlerts() {
+  latestSupplierNotifications.forEach((notification) => {
+    clearedSupplierApprovalIds.add(Number(notification.id));
+  });
+
+  renderSupplierApprovalFeed([]);
+  updateSupplierApprovalBadge(0);
+}
+
+function startSupplierApprovalPolling() {
+  if (supplierAlertTimer !== null) {
+    return;
+  }
+
+  pollSupplierApprovals();
+  supplierAlertTimer = window.setInterval(() => {
+    pollSupplierApprovals();
+  }, SUPPLIER_ALERT_POLL_MS);
+
+  window.addEventListener('beforeunload', () => {
+    if (supplierAlertTimer !== null) {
+      window.clearInterval(supplierAlertTimer);
+      supplierAlertTimer = null;
+    }
+  });
+
+  if (supplierApprovalFeed) {
+    supplierApprovalFeed.addEventListener('mouseenter', () => {
+      const visibleNotifications = latestSupplierNotifications.filter(
+        (notification) => !clearedSupplierApprovalIds.has(Number(notification.id))
+      );
+      updateSupplierApprovalBadge(visibleNotifications.length);
+    });
+  }
+
+  if (supplierClearAlertsBtn) {
+    supplierClearAlertsBtn.addEventListener('click', clearSupplierAlerts);
   }
 }
 

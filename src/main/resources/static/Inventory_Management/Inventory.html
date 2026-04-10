@@ -48,6 +48,20 @@
       </section>
 
       <section class="panel full-width">
+        <h2>Manager Approval Alerts</h2>
+        <div class="approval-alerts-head">
+          <p class="approval-alerts-note">Live updates when the manager approves a low-stock request.</p>
+          <div class="approval-alert-actions">
+            <span class="approval-badge-wrap">New Alerts: <strong id="inventoryApprovalBadge">0</strong></span>
+            <button type="button" id="inventoryClearAlertsBtn" class="clear-alerts-btn">Clear Alerts</button>
+          </div>
+        </div>
+        <ul class="approval-alert-list" id="inventoryApprovalList">
+          <li>No approvals received yet.</li>
+        </ul>
+      </section>
+
+      <section class="panel full-width">
         <h2>Inventory Stock Levels</h2>
         <div class="table-actions">
           <button type="button" id="openAddDialogBtn">Add Inventory Item</button>
@@ -179,6 +193,8 @@
       </div>
     </form>
   </dialog>
+
+  <div id="inventoryToastStack" class="inventory-toast-stack" aria-live="polite"></div>
 
   <script src="Inventory.js"></script>
 </body>

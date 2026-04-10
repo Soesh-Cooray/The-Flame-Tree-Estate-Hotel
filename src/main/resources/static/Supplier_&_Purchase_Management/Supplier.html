@@ -73,6 +73,16 @@
 
       <section class="panel full-width">
         <h2>Low Stock Approvals from Manager</h2>
+        <div class="supplier-alert-head">
+          <p class="supplier-alert-note">Live updates when manager approves low-stock items for purchasing.</p>
+          <div class="supplier-alert-actions">
+            <span class="supplier-alert-badge-wrap">New Alerts: <strong id="supplierApprovalBadge">0</strong></span>
+            <button type="button" id="supplierClearAlertsBtn" class="clear-alerts-btn">Clear Alerts</button>
+          </div>
+        </div>
+        <ul id="supplierApprovalFeed" class="supplier-alert-feed">
+          <li>No live alerts yet.</li>
+        </ul>
         <div class="table-wrap">
           <table>
             <thead>
@@ -160,6 +170,8 @@
       </div>
     </form>
   </dialog>
+
+  <div id="supplierToastStack" class="supplier-toast-stack" aria-live="polite"></div>
 
   <script src="Supplier.js"></script>
 </body>
