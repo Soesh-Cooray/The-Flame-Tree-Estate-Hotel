@@ -166,18 +166,18 @@ th {
 }
 
 .tag.pending {
-  background: rgba(248, 195, 101, 0.2);
-  color: #ffd68a;
+  background: rgba(248, 195, 101, 0.25);
+  color: #996312;
 }
 
 .tag.in-progress {
-  background: rgba(255, 122, 61, 0.18);
-  color: #ffb48f;
+  background: rgba(255, 122, 61, 0.24);
+  color: #9d501b;
 }
 
 .tag.completed {
-  background: rgba(140, 206, 169, 0.18);
-  color: #9fe0b9;
+  background: rgba(91, 166, 118, 0.22);
+  color: #2f7d4f;
 }
 
 .summary-grid {

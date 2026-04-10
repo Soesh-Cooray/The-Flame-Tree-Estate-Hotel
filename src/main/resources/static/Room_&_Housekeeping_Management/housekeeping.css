@@ -166,19 +166,19 @@ th {
 }
 
 .tag.assigned {
-  background: rgba(248, 195, 101, 0.2);
-  color: #ffd68a;
+  background: rgba(248, 195, 101, 0.25);
+  color: #996312;
 }
 
 .tag.completed,
 .tag.done {
-  background: rgba(140, 206, 169, 0.18);
-  color: #9fe0b9;
+  background: rgba(91, 166, 118, 0.22);
+  color: #2f7d4f;
 }
 
 .tag.clean {
-  background: rgba(255, 122, 61, 0.18);
-  color: #ffb48f;
+  background: rgba(255, 122, 61, 0.24);
+  color: #9d501b;
 }
 
 .summary-grid {
@@ -319,7 +319,7 @@ th {
   padding: 12px;
   border-radius: 8px;
   background: rgba(228, 114, 184, 0.12);
-  color: #c892ff;
+  color: #8d58cf;
   display: none;
 }
 
