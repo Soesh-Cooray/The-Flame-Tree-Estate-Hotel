@@ -24,6 +24,7 @@ public class maintenanceService {
 
     private final maintenanceRepository repository;
     private final guestService guestService;
+    private final workflowNotificationService notificationService;
 
     public List<maintenance> getAllTickets() {
         return repository.findAll();
@@ -54,7 +55,16 @@ public class maintenanceService {
         newTicket.setSupervisorDecision(DECISION_PENDING_REVIEW);
         newTicket.setRejectionReason("");
 
-        return repository.save(newTicket);
+        maintenance saved = repository.save(newTicket);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_MAINTENANCE,
+                workflowNotificationService.AUDIENCE_SUPERVISOR),
+            "maintenance-ticket",
+            saved.getTicket());
+
+        return saved;
     }
 
     public maintenance addTicketFromGuestRequest(String guestRequestId, String location, String issue, String assignedStaff) {
@@ -78,12 +88,23 @@ public class maintenanceService {
         ticket.setSupervisorDecision(DECISION_PENDING_REVIEW);
         ticket.setRejectionReason("");
 
-        return repository.save(ticket);
+        maintenance saved = repository.save(ticket);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_MAINTENANCE,
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_GUEST),
+            "maintenance-ticket",
+            saved.getGuestRequestId());
+
+        return saved;
     }
 
     public maintenance updateTicket(int id, String ticket, String location, String issue, String assignedTo, String status) {
         maintenance existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found."));
+        boolean wasCompleted = STATUS_COMPLETED.equalsIgnoreCase(existing.getStatus());
 
         existing.setTicket(ticket);
         existing.setLocation(location);
@@ -104,7 +125,27 @@ public class maintenanceService {
             }
         }
 
-        return repository.save(existing);
+        maintenance saved = repository.save(existing);
+
+        if (!wasCompleted && STATUS_COMPLETED.equalsIgnoreCase(saved.getStatus())) {
+                notificationService.create(
+                    workflowNotificationService.AUDIENCE_SUPERVISOR,
+                    "Maintenance Task Completed",
+                    "Task " + safeTaskCode(saved) + " was marked Completed by maintenance.",
+                    "TASK_COMPLETED",
+                    safeRequestId(saved),
+                    "Maintenance");
+        }
+
+            notificationService.publishDataChange(
+                List.of(
+                        workflowNotificationService.AUDIENCE_MAINTENANCE,
+                        workflowNotificationService.AUDIENCE_SUPERVISOR,
+                        workflowNotificationService.AUDIENCE_GUEST),
+                "maintenance-ticket",
+                safeRequestId(saved));
+
+        return saved;
     }
 
     public maintenance supervisorDecision(int id, String decision, String reassignedTo, String rejectionReason) {
@@ -122,6 +163,32 @@ public class maintenanceService {
             existing.setSupervisorDecision(DECISION_APPROVED);
             existing.setRejectionReason("");
             maintenance saved = repository.save(existing);
+
+                notificationService.create(
+                workflowNotificationService.AUDIENCE_MAINTENANCE,
+                "Task Approved",
+                "Supervisor approved maintenance task " + safeTaskCode(saved) + ".",
+                "TASK_APPROVED",
+                safeRequestId(saved),
+                "Maintenance");
+
+            if (isGuestRequest(saved.getGuestRequestId())) {
+                notificationService.create(
+                workflowNotificationService.AUDIENCE_GUEST,
+                "Request Approved",
+                "Supervisor approved request " + saved.getGuestRequestId() + ".",
+                "REQUEST_APPROVED",
+                saved.getGuestRequestId(),
+                "Maintenance");
+            }
+
+                notificationService.publishDataChange(
+                List.of(
+                    workflowNotificationService.AUDIENCE_SUPERVISOR,
+                    workflowNotificationService.AUDIENCE_MAINTENANCE,
+                    workflowNotificationService.AUDIENCE_GUEST),
+                "maintenance-approval",
+                safeRequestId(saved));
 
             if (isGuestRequest(saved.getGuestRequestId())) {
                 guestService.updateStatusByRequestId(saved.getGuestRequestId(), STATUS_COMPLETED);
@@ -146,6 +213,14 @@ public class maintenanceService {
         if (isGuestRequest(saved.getGuestRequestId())) {
             guestService.updateStatusByRequestId(saved.getGuestRequestId(), STATUS_IN_PROGRESS);
         }
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_MAINTENANCE,
+                workflowNotificationService.AUDIENCE_GUEST),
+            "maintenance-approval",
+            safeRequestId(saved));
 
         return saved;
     }
@@ -211,9 +286,31 @@ public class maintenanceService {
     }
 
     public void deleteTicket(int id) {
-        if (!repository.existsById(id)) {
-            throw new RuntimeException("Ticket not found.");
-        }
+        maintenance existing = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket not found."));
+
         repository.deleteById(id);
+
+        notificationService.publishDataChange(
+                List.of(
+                        workflowNotificationService.AUDIENCE_MAINTENANCE,
+                        workflowNotificationService.AUDIENCE_SUPERVISOR,
+                        workflowNotificationService.AUDIENCE_GUEST),
+                "maintenance-ticket",
+                safeRequestId(existing));
+    }
+
+    private String safeTaskCode(maintenance ticket) {
+        if (ticket.getGuestRequestId() != null && !ticket.getGuestRequestId().isBlank()) {
+            return ticket.getGuestRequestId();
+        }
+        return ticket.getTicket();
+    }
+
+    private String safeRequestId(maintenance ticket) {
+        if (ticket.getGuestRequestId() != null && !ticket.getGuestRequestId().isBlank()) {
+            return ticket.getGuestRequestId();
+        }
+        return ticket.getTicket() == null ? "" : ticket.getTicket();
     }
 }

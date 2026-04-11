@@ -19,6 +19,7 @@ public class guestService {
     private static final Pattern REQUEST_ID_PATTERN = Pattern.compile("REQ-(\\d+)");
 
     private final guestRepository repository;
+    private final workflowNotificationService notificationService;
 
     public List<guest> getAllRequests() {
         return repository.findAll();
@@ -58,7 +59,24 @@ public class guestService {
         newRequest.setRequestDateTime(LocalDateTime.now());
         newRequest.setRoutedModule("");
 
-        return repository.save(newRequest);
+        guest saved = repository.save(newRequest);
+
+        notificationService.create(
+            workflowNotificationService.AUDIENCE_SUPERVISOR,
+            "New Guest Request",
+            "Guest request " + saved.getRequestId() + " was placed for " + saved.getRoomName() + ".",
+            "REQUEST_PLACED",
+            saved.getRequestId(),
+            "Guest Service");
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_GUEST,
+                workflowNotificationService.AUDIENCE_SUPERVISOR),
+            "guest-request",
+            saved.getRequestId());
+
+        return saved;
     }
 
     public guest updateRequest(int id, String requestId, String roomName, String request) {
@@ -75,7 +93,16 @@ public class guestService {
         existing.setRoomName(roomName);
         existing.setRequest(request);
 
-        return repository.save(existing);
+        guest saved = repository.save(existing);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_GUEST,
+                workflowNotificationService.AUDIENCE_SUPERVISOR),
+            "guest-request",
+            saved.getRequestId());
+
+        return saved;
     }
 
     public guest markRouted(String requestId, String moduleName) {
@@ -87,20 +114,49 @@ public class guestService {
 
         existing.setRoutedModule(normalizeModule(moduleName));
         existing.setStatus("In Progress");
-        return repository.save(existing);
+        guest saved = repository.save(existing);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_GUEST,
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                workflowNotificationService.AUDIENCE_MAINTENANCE),
+            "guest-request",
+            saved.getRequestId());
+
+        return saved;
     }
 
     public guest updateStatusByRequestId(String requestId, String status) {
         guest existing = getByRequestId(requestId);
         existing.setStatus(status);
-        return repository.save(existing);
+        guest saved = repository.save(existing);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_GUEST,
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                workflowNotificationService.AUDIENCE_MAINTENANCE),
+            "guest-request",
+            saved.getRequestId());
+
+        return saved;
     }
 
     public void deleteRequest(int id) {
-        if (!repository.existsById(id)) {
-            throw new RuntimeException("Request not found.");
-        }
+        guest existing = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found."));
+
         repository.deleteById(id);
+
+        notificationService.publishDataChange(
+                List.of(
+                        workflowNotificationService.AUDIENCE_GUEST,
+                        workflowNotificationService.AUDIENCE_SUPERVISOR),
+                "guest-request",
+                existing.getRequestId());
     }
 
     private int extractSequence(String requestId) {

@@ -29,6 +29,7 @@ public class housekeepingService {
     private final housekeepingInventoryUsageRepository usageRepository;
     private final guestService guestService;
     private final inventoryService inventoryService;
+    private final workflowNotificationService notificationService;
 
     public List<housekeeping> getAllTasks() {
         return repository.findAll();
@@ -59,7 +60,16 @@ public class housekeepingService {
         task.setSupervisorDecision(DECISION_PENDING_REVIEW);
         task.setRejectionReason("");
 
-        return repository.save(task);
+        housekeeping saved = repository.save(task);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                workflowNotificationService.AUDIENCE_SUPERVISOR),
+            "housekeeping-task",
+            saved.getRequestId());
+
+        return saved;
     }
 
     public housekeeping addTaskFromGuestRequest(String requestId, String room, String requestType, String assignedStaff) {
@@ -77,12 +87,23 @@ public class housekeepingService {
         task.setSupervisorDecision(DECISION_PENDING_REVIEW);
         task.setRejectionReason("");
 
-        return repository.save(task);
+        housekeeping saved = repository.save(task);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_GUEST),
+            "housekeeping-task",
+            saved.getRequestId());
+
+        return saved;
     }
 
     public housekeeping updateTask(int id, String requestId, String room, String requestType, String assignedStaff, String taskStatus) {
         housekeeping existing = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Task not found."));
+        boolean wasCompleted = STATUS_COMPLETED.equalsIgnoreCase(existing.getTaskStatus());
 
         existing.setRequestId(requestId);
         existing.setRoom(room);
@@ -103,7 +124,27 @@ public class housekeepingService {
             }
         }
 
-        return repository.save(existing);
+        housekeeping saved = repository.save(existing);
+
+        if (!wasCompleted && STATUS_COMPLETED.equalsIgnoreCase(saved.getTaskStatus())) {
+                notificationService.create(
+                    workflowNotificationService.AUDIENCE_SUPERVISOR,
+                    "Housekeeping Task Completed",
+                    "Task " + saved.getRequestId() + " was marked Completed by housekeeping.",
+                    "TASK_COMPLETED",
+                    saved.getRequestId(),
+                    "Housekeeping");
+        }
+
+            notificationService.publishDataChange(
+                List.of(
+                        workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                        workflowNotificationService.AUDIENCE_SUPERVISOR,
+                        workflowNotificationService.AUDIENCE_GUEST),
+                "housekeeping-task",
+                saved.getRequestId());
+
+        return saved;
     }
 
     public housekeeping supervisorDecision(int id, String decision, String reassignedTo, String rejectionReason) {
@@ -121,6 +162,32 @@ public class housekeepingService {
             existing.setSupervisorDecision(DECISION_APPROVED);
             existing.setRejectionReason("");
             housekeeping saved = repository.save(existing);
+
+                notificationService.create(
+                workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                "Task Approved",
+                "Supervisor approved housekeeping task " + saved.getRequestId() + ".",
+                "TASK_APPROVED",
+                saved.getRequestId(),
+                "Housekeeping");
+
+            if (isGuestRequest(saved.getRequestId())) {
+                notificationService.create(
+                workflowNotificationService.AUDIENCE_GUEST,
+                "Request Approved",
+                "Supervisor approved request " + saved.getRequestId() + ".",
+                "REQUEST_APPROVED",
+                saved.getRequestId(),
+                "Housekeeping");
+            }
+
+                notificationService.publishDataChange(
+                List.of(
+                    workflowNotificationService.AUDIENCE_SUPERVISOR,
+                    workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                    workflowNotificationService.AUDIENCE_GUEST),
+                "housekeeping-approval",
+                saved.getRequestId());
 
             if (isGuestRequest(saved.getRequestId())) {
                 guestService.updateStatusByRequestId(saved.getRequestId(), STATUS_COMPLETED);
@@ -145,6 +212,14 @@ public class housekeepingService {
         if (isGuestRequest(saved.getRequestId())) {
             guestService.updateStatusByRequestId(saved.getRequestId(), STATUS_IN_PROGRESS);
         }
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                workflowNotificationService.AUDIENCE_GUEST),
+            "housekeeping-approval",
+            saved.getRequestId());
 
         return saved;
     }
@@ -204,10 +279,18 @@ public class housekeepingService {
     }
 
     public void deleteTask(int id) {
-        if (!repository.existsById(id)) {
-            throw new RuntimeException("Task not found.");
-        }
+        housekeeping existing = repository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Task not found."));
+
         repository.deleteById(id);
+
+        notificationService.publishDataChange(
+            List.of(
+                workflowNotificationService.AUDIENCE_HOUSEKEEPING,
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_GUEST),
+            "housekeeping-task",
+            existing.getRequestId());
     }
 
     public housekeepingInventoryUsage logInventoryUsage(int inventoryId, String staffName, int usedQty) {

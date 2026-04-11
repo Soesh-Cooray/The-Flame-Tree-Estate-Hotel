@@ -16,6 +16,7 @@ import project.flametreehotel.Model.guest;
 import project.flametreehotel.Services.guestService;
 import project.flametreehotel.Services.housekeepingService;
 import project.flametreehotel.Services.maintenanceService;
+import project.flametreehotel.Services.workflowNotificationService;
 
 @RestController
 @RequestMapping("/guestservice")
@@ -25,6 +26,7 @@ public class guestserviceController {
     private final guestService service;
     private final housekeepingService housekeepingService;
     private final maintenanceService maintenanceService;
+    private final workflowNotificationService notificationService;
 
     /**
      * GET /guestservice/list
@@ -157,6 +159,40 @@ public class guestserviceController {
             }
 
             guest routed = service.markRouted(requestId, targetModule);
+
+            String department = routed.getRoutedModule();
+            String assigneeText = assignedStaff == null || assignedStaff.isBlank()
+                ? "an available staff member"
+                : assignedStaff;
+
+            notificationService.create(
+                workflowNotificationService.AUDIENCE_GUEST,
+                "Request Routed",
+                "Request " + routed.getRequestId() + " was routed to " + department + " and assigned to " + assigneeText + ".",
+                "REQUEST_ROUTED",
+                routed.getRequestId(),
+                department);
+
+            String departmentAudience = "housekeeping".equals(targetModule)
+                ? workflowNotificationService.AUDIENCE_HOUSEKEEPING
+                : workflowNotificationService.AUDIENCE_MAINTENANCE;
+
+            notificationService.create(
+                departmentAudience,
+                "New Task Assigned",
+                "Supervisor assigned new task " + routed.getRequestId() + " to " + department + ".",
+                "TASK_ASSIGNED",
+                routed.getRequestId(),
+                department);
+
+            notificationService.publishDataChange(
+                List.of(
+                    workflowNotificationService.AUDIENCE_SUPERVISOR,
+                    workflowNotificationService.AUDIENCE_GUEST,
+                    departmentAudience),
+                "guest-routing",
+                routed.getRequestId());
+
             response.put("success", true);
             response.put("message", "Request " + routed.getRequestId() + " routed to " + routed.getRoutedModule() + ".");
             response.put("request", routed);
