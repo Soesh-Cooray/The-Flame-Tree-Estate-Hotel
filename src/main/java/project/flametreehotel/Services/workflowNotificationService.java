@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import project.flametreehotel.Model.workflowNotification;
@@ -52,6 +53,7 @@ public class workflowNotificationService {
         return repository.findTop40ByAudienceOrderByCreatedAtDesc(normalizeAudience(audience));
     }
 
+    @Transactional
     public long clearByAudience(String audience) {
         String normalizedAudience = normalizeAudience(audience);
         long deletedCount = repository.deleteByAudience(normalizedAudience);
