@@ -11,25 +11,29 @@
 </head>
 <body>
   <div class="shell">
-    <aside class="sidebar" id="sidebar">
+    <header class="top-header">
       <div class="brand-block">
         <p class="eyebrow">Manager Console</p>
         <h1>The Flame Tree Estate Hotel</h1>
         <p class="subtext">Oversee all staff functions and hotel operations from one place.</p>
       </div>
 
-      <nav class="side-nav" aria-label="Manager navigation">
-        <a href="#overview">Overview</a>
-        <a href="#access-control">User Access Control</a>
-        <a href="#guest-services">Guest Services</a>
-        <a href="#housekeeping">Housekeeping</a>
-        <a href="#inventory">Inventory</a>
-        <a href="#maintenance">Maintenance</a>
-        <a href="#suppliers">Suppliers &amp; Purchase</a>
-      </nav>
-
-      <a class="back-link" href="index.html">Logout</a>
-    </aside>
+      <div class="header-actions">
+        <nav class="top-nav" aria-label="Manager navigation">
+          <a href="#overview">Overview</a>
+          <a href="#access-control">Access</a>
+          <a href="#guest-services">Guest</a>
+          <a href="#housekeeping">Housekeeping</a>
+          <a href="#inventory">Inventory</a>
+          <a href="#maintenance">Maintenance</a>
+          <a href="#suppliers">Suppliers</a>
+        </nav>
+        <a class="btn-logout" href="index.html">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Logout
+        </a>
+      </div>
+    </header>
 
     <main class="content">
       <section class="panel" id="overview">
