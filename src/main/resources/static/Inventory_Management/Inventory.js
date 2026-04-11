@@ -41,6 +41,12 @@ const inventoryClearAlertsBtn = document.getElementById('inventoryClearAlertsBtn
 
 const INVENTORY_ALERT_POLL_MS = 5000;
 const MAX_APPROVAL_FEED_ITEMS = 8;
+const STORAGE_KEYS = {
+  approvals: 'inventoryClearedApprovalIds',
+  supplierPo: 'inventoryClearedSupplierPoNotificationIds',
+  receivedPo: 'inventoryClearedReceivedPoNotificationIds',
+  usage: 'inventoryClearedHousekeepingUsageIds'
+};
 
 let inventoryAlertTimer = null;
 let inventorySyncInFlight = false;
@@ -52,14 +58,45 @@ let hasReceivedPoBaseline = false;
 let knownReceivedPoNotificationIds = new Set();
 let hasHousekeepingUsageBaseline = false;
 let knownHousekeepingUsageIds = new Set();
-let clearedApprovalIds = new Set();
-let clearedSupplierPoNotificationIds = new Set();
-let clearedReceivedPoNotificationIds = new Set();
-let clearedHousekeepingUsageIds = new Set();
+let clearedApprovalIds = loadClearedIdSet(STORAGE_KEYS.approvals);
+let clearedSupplierPoNotificationIds = loadClearedIdSet(STORAGE_KEYS.supplierPo);
+let clearedReceivedPoNotificationIds = loadClearedIdSet(STORAGE_KEYS.receivedPo);
+let clearedHousekeepingUsageIds = loadClearedIdSet(STORAGE_KEYS.usage);
 let latestApprovalNotifications = [];
 let latestSupplierPoNotifications = [];
 let latestReceivedPoNotifications = [];
 let latestHousekeepingUsageNotifications = [];
+
+function loadClearedIdSet(storageKey) {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(
+      parsed
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0)
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function saveClearedIdSet(storageKey, idSet) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(Array.from(idSet)));
+  } catch {
+    // Storage can be unavailable in private browsing modes.
+  }
+}
+
+function persistAllClearedAlertSets() {
+  saveClearedIdSet(STORAGE_KEYS.approvals, clearedApprovalIds);
+  saveClearedIdSet(STORAGE_KEYS.supplierPo, clearedSupplierPoNotificationIds);
+  saveClearedIdSet(STORAGE_KEYS.receivedPo, clearedReceivedPoNotificationIds);
+  saveClearedIdSet(STORAGE_KEYS.usage, clearedHousekeepingUsageIds);
+}
 
 const ITEM_CATEGORY_MAP = {
   'Bath towels': 'Bathroom Essentials',
@@ -562,6 +599,8 @@ async function clearApprovalAlerts() {
   latestHousekeepingUsageNotifications.forEach((usage) => {
     clearedHousekeepingUsageIds.add(Number(usage.id));
   });
+
+  persistAllClearedAlertSets();
 
   renderApprovalFeed([]);
   renderSupplierPoFeed([]);
