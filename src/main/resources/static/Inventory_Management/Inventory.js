@@ -133,7 +133,7 @@ function renderTable(items) {
 
   if (items.length === 0) {
     const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = '<td colspan="8">No inventory items yet. Add your first item.</td>';
+    emptyRow.innerHTML = '<td colspan="9">No inventory items yet. Add your first item.</td>';
     inventoryTableBody.appendChild(emptyRow);
     return;
   }
@@ -141,6 +141,10 @@ function renderTable(items) {
   items.forEach((item) => {
     const row = document.createElement('tr');
     const cls = statusClass(item.status);
+    const usableStock = Math.max(
+      0,
+      Number(item.inStock || 0) - Number(item.damaged || 0) - Number(item.missing || 0)
+    );
 
     row.innerHTML = `
       <td>${item.item}</td>
@@ -149,6 +153,7 @@ function renderTable(items) {
       <td>${item.minLevel}</td>
       <td>${item.damaged}</td>
       <td>${item.missing}</td>
+      <td>${usableStock}</td>
       <td><span class="tag ${cls}">${item.status}</span></td>
       <td>
         <div class="row-actions">
