@@ -2,6 +2,7 @@ const currentRole = localStorage.getItem('currentUserRole') || 'Staff Supervisor
 
 const state = {
   rows: [],
+  usageRows: [],
   assignmentStaff: {
     housekeeping: [],
     maintenance: [],
@@ -46,9 +47,10 @@ async function apiPost(url, body) {
 
 async function loadUnifiedData() {
   try {
-    const [panelRes, usersRes] = await Promise.all([
+    const [panelRes, usersRes, usageRes] = await Promise.all([
       fetch('/guestservice/supervisor/unified'),
       fetch('/auth/users'),
+      fetch('/housekeeping/inventory-usage/list'),
     ]);
 
     if (!panelRes.ok) {
@@ -62,6 +64,7 @@ async function loadUnifiedData() {
 
     const users = usersRes.ok ? await usersRes.json() : [];
     hydrateAssignmentStaff(users);
+    state.usageRows = usageRes.ok ? await usageRes.json() : [];
 
     state.rows = [...guest, ...housekeeping, ...maintenance];
     renderMetrics(state.rows);
@@ -188,6 +191,36 @@ function approvalRows() {
 function renderTaskQueues() {
   renderAssignmentTable();
   renderApprovalTable();
+  renderInventoryUsageTable();
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
+}
+
+function renderInventoryUsageTable() {
+  const body = document.getElementById('inventoryUsageTableBody');
+  if (!body) {
+    return;
+  }
+
+  const rows = Array.isArray(state.usageRows) ? state.usageRows : [];
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="4">No inventory usage logs yet.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(formatDateTime(row.usedAt))}</td>
+      <td>${escapeHtml(row.itemName)}</td>
+      <td>${escapeHtml(row.staffName)}</td>
+      <td>${Number(row.usedQty || 0)}</td>
+    </tr>
+  `).join('');
 }
 
 function renderAssignmentTable() {

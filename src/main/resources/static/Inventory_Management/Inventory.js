@@ -34,6 +34,8 @@ const inventorySupplierPoBadge = document.getElementById('inventorySupplierPoBad
 const inventorySupplierPoList = document.getElementById('inventorySupplierPoList');
 const inventoryReceivedPoBadge = document.getElementById('inventoryReceivedPoBadge');
 const inventoryReceivedPoList = document.getElementById('inventoryReceivedPoList');
+const inventoryUsageBadge = document.getElementById('inventoryUsageBadge');
+const inventoryUsageList = document.getElementById('inventoryUsageList');
 const inventoryToastStack = document.getElementById('inventoryToastStack');
 const inventoryClearAlertsBtn = document.getElementById('inventoryClearAlertsBtn');
 
@@ -41,18 +43,23 @@ const INVENTORY_ALERT_POLL_MS = 5000;
 const MAX_APPROVAL_FEED_ITEMS = 8;
 
 let inventoryAlertTimer = null;
+let inventorySyncInFlight = false;
 let hasApprovalBaseline = false;
 let knownApprovalIds = new Set();
 let hasSupplierPoBaseline = false;
 let knownSupplierPoNotificationIds = new Set();
 let hasReceivedPoBaseline = false;
 let knownReceivedPoNotificationIds = new Set();
+let hasHousekeepingUsageBaseline = false;
+let knownHousekeepingUsageIds = new Set();
 let clearedApprovalIds = new Set();
 let clearedSupplierPoNotificationIds = new Set();
 let clearedReceivedPoNotificationIds = new Set();
+let clearedHousekeepingUsageIds = new Set();
 let latestApprovalNotifications = [];
 let latestSupplierPoNotifications = [];
 let latestReceivedPoNotifications = [];
+let latestHousekeepingUsageNotifications = [];
 
 const ITEM_CATEGORY_MAP = {
   'Bath towels': 'Bathroom Essentials',
@@ -204,6 +211,38 @@ function updateApprovalBadge(currentVisibleCount) {
   inventoryApprovalBadge.textContent = String(currentVisibleCount);
 }
 
+function getVisibleManagerApprovalCount() {
+  return latestApprovalNotifications.filter(
+    (notification) => !clearedApprovalIds.has(Number(notification.id))
+  ).length;
+}
+
+function getVisibleSupplierPoCount() {
+  return latestSupplierPoNotifications.filter(
+    (notification) => !clearedSupplierPoNotificationIds.has(Number(notification.id))
+  ).length;
+}
+
+function getVisibleReceivedPoCount() {
+  return latestReceivedPoNotifications.filter(
+    (notification) => !clearedReceivedPoNotificationIds.has(Number(notification.id))
+  ).length;
+}
+
+function getVisibleHousekeepingUsageCount() {
+  return latestHousekeepingUsageNotifications.filter(
+    (usage) => !clearedHousekeepingUsageIds.has(Number(usage.id))
+  ).length;
+}
+
+function updateLiveAlertsCounter() {
+  const totalVisible = getVisibleManagerApprovalCount()
+    + getVisibleSupplierPoCount()
+    + getVisibleReceivedPoCount()
+    + getVisibleHousekeepingUsageCount();
+  updateApprovalBadge(totalVisible);
+}
+
 function renderApprovalFeed(notifications) {
   if (!inventoryApprovalList) {
     return;
@@ -285,6 +324,35 @@ function renderReceivedPoFeed(notifications) {
   });
 }
 
+function renderHousekeepingUsageFeed(notifications) {
+  if (inventoryUsageBadge) {
+    inventoryUsageBadge.textContent = String(notifications.length);
+  }
+
+  if (!inventoryUsageList) {
+    return;
+  }
+
+  inventoryUsageList.innerHTML = '';
+  if (notifications.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No housekeeping usage alerts yet.';
+    inventoryUsageList.appendChild(li);
+    return;
+  }
+
+  notifications.slice(0, MAX_APPROVAL_FEED_ITEMS).forEach((usage) => {
+    const itemName = String(usage?.itemName || 'Inventory item');
+    const staffName = String(usage?.staffName || 'Housekeeping staff');
+    const usedQty = Number(usage?.usedQty || 0);
+    const usedAt = formatDateTime(usage?.usedAt);
+
+    const li = document.createElement('li');
+    li.textContent = `${staffName} used ${usedQty} units of ${itemName} at ${usedAt}.`;
+    inventoryUsageList.appendChild(li);
+  });
+}
+
 async function loadManagerApprovalNotifications() {
   const res = await fetch('/inventory/approved-low-stock-notifications');
   if (!res.ok) {
@@ -305,7 +373,7 @@ async function pollManagerApprovals() {
       hasApprovalBaseline = true;
       const visibleAtStart = notifications.filter((notification) => !clearedApprovalIds.has(Number(notification.id)));
       renderApprovalFeed(visibleAtStart);
-      updateApprovalBadge(visibleAtStart.length);
+      updateLiveAlertsCounter();
       return;
     }
 
@@ -319,7 +387,7 @@ async function pollManagerApprovals() {
 
     const visibleNotifications = notifications.filter((notification) => !clearedApprovalIds.has(Number(notification.id)));
     renderApprovalFeed(visibleNotifications);
-    updateApprovalBadge(visibleNotifications.length);
+    updateLiveAlertsCounter();
     knownApprovalIds = currentIds;
   } catch (err) {
     showMessage('Error loading manager approvals: ' + err.message);
@@ -344,6 +412,7 @@ async function pollSupplierPoNotificationsForInventory() {
     if (!hasSupplierPoBaseline) {
       knownSupplierPoNotificationIds = currentIds;
       hasSupplierPoBaseline = true;
+      updateLiveAlertsCounter();
       return;
     }
 
@@ -361,6 +430,7 @@ async function pollSupplierPoNotificationsForInventory() {
       );
     });
 
+    updateLiveAlertsCounter();
     knownSupplierPoNotificationIds = currentIds;
   } catch (err) {
     showMessage('Error loading supplier order notifications: ' + err.message);
@@ -385,6 +455,7 @@ async function pollReceivedPoNotificationsForInventory() {
     if (!hasReceivedPoBaseline) {
       knownReceivedPoNotificationIds = currentIds;
       hasReceivedPoBaseline = true;
+      updateLiveAlertsCounter();
       return;
     }
 
@@ -403,13 +474,74 @@ async function pollReceivedPoNotificationsForInventory() {
       );
     });
 
+    updateLiveAlertsCounter();
     knownReceivedPoNotificationIds = currentIds;
   } catch (err) {
     showMessage('Error loading received order notifications: ' + err.message);
   }
 }
 
-function clearApprovalAlerts() {
+async function pollHousekeepingUsageNotificationsForInventory() {
+  try {
+    const res = await fetch('/inventory/housekeeping-usage-notifications');
+    if (!res.ok) {
+      return;
+    }
+
+    const usageNotifications = await res.json();
+    latestHousekeepingUsageNotifications = usageNotifications;
+    const visibleUsageNotifications = usageNotifications.filter(
+      (usage) => !clearedHousekeepingUsageIds.has(Number(usage.id))
+    );
+    renderHousekeepingUsageFeed(visibleUsageNotifications);
+
+    const currentIds = new Set(usageNotifications.map((usage) => Number(usage.id)));
+    if (!hasHousekeepingUsageBaseline) {
+      knownHousekeepingUsageIds = currentIds;
+      hasHousekeepingUsageBaseline = true;
+      updateLiveAlertsCounter();
+      return;
+    }
+
+    const newUsageNotifications = usageNotifications.filter(
+      (usage) => !knownHousekeepingUsageIds.has(Number(usage.id))
+    );
+
+    newUsageNotifications.forEach((usage) => {
+      const itemName = String(usage?.itemName || 'Inventory item');
+      const staffName = String(usage?.staffName || 'Housekeeping staff');
+      const usedQty = Number(usage?.usedQty || 0);
+
+      showInventoryToast(
+        'Housekeeping Usage',
+        `${staffName} used ${usedQty} units of ${itemName} during housekeeping runs.`
+      );
+    });
+
+    updateLiveAlertsCounter();
+    knownHousekeepingUsageIds = currentIds;
+  } catch (err) {
+    showMessage('Error loading housekeeping usage notifications: ' + err.message);
+  }
+}
+
+async function clearApprovalAlerts() {
+  const supplierPoIdsToDismiss = latestSupplierPoNotifications
+    .map((notification) => Number(notification.id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  if (supplierPoIdsToDismiss.length > 0) {
+    try {
+      await fetch('/inventory/ordered-low-stock-notifications/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: supplierPoIdsToDismiss })
+      });
+    } catch {
+      showMessage('Could not persist Supplier PO alert dismiss.');
+    }
+  }
+
   latestApprovalNotifications.forEach((notification) => {
     clearedApprovalIds.add(Number(notification.id));
   });
@@ -422,10 +554,17 @@ function clearApprovalAlerts() {
     clearedReceivedPoNotificationIds.add(Number(notification.id));
   });
 
+  latestHousekeepingUsageNotifications.forEach((usage) => {
+    clearedHousekeepingUsageIds.add(Number(usage.id));
+  });
+
   renderApprovalFeed([]);
-  updateApprovalBadge(0);
   renderSupplierPoFeed([]);
   renderReceivedPoFeed([]);
+  renderHousekeepingUsageFeed([]);
+  updateLiveAlertsCounter();
+
+  await pollSupplierPoNotificationsForInventory();
 }
 
 function startApprovalPolling() {
@@ -433,15 +572,19 @@ function startApprovalPolling() {
     return;
   }
 
+  syncInventorySnapshot();
   pollManagerApprovals();
   inventoryAlertTimer = window.setInterval(() => {
+    syncInventorySnapshot();
     pollManagerApprovals();
     pollSupplierPoNotificationsForInventory();
     pollReceivedPoNotificationsForInventory();
+    pollHousekeepingUsageNotificationsForInventory();
   }, INVENTORY_ALERT_POLL_MS);
 
   pollSupplierPoNotificationsForInventory();
   pollReceivedPoNotificationsForInventory();
+  pollHousekeepingUsageNotificationsForInventory();
 
   window.addEventListener('beforeunload', () => {
     if (inventoryAlertTimer !== null) {
@@ -450,12 +593,21 @@ function startApprovalPolling() {
     }
   });
 
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'inventoryUpdateSignal') {
+      syncInventorySnapshot();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      syncInventorySnapshot();
+    }
+  });
+
   if (inventoryApprovalList) {
     inventoryApprovalList.addEventListener('mouseenter', () => {
-      const visibleNotifications = latestApprovalNotifications.filter(
-        (notification) => !clearedApprovalIds.has(Number(notification.id))
-      );
-      updateApprovalBadge(visibleNotifications.length);
+      updateLiveAlertsCounter();
     });
   }
 
@@ -472,6 +624,19 @@ async function loadAndRender() {
     renderAll(items);
   } catch (err) {
     showMessage('Error loading inventory: ' + err.message);
+  }
+}
+
+async function syncInventorySnapshot() {
+  if (inventorySyncInFlight) {
+    return;
+  }
+
+  inventorySyncInFlight = true;
+  try {
+    await loadAndRender();
+  } finally {
+    inventorySyncInFlight = false;
   }
 }
 

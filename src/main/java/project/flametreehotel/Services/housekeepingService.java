@@ -8,7 +8,10 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import project.flametreehotel.Model.housekeeping;
+import project.flametreehotel.Model.housekeepingInventoryUsage;
+import project.flametreehotel.Model.inventory;
 import project.flametreehotel.Repository.housekeepingRepository;
+import project.flametreehotel.Repository.housekeepingInventoryUsageRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +26,9 @@ public class housekeepingService {
     private static final String DECISION_REJECTED = "Rejected";
 
     private final housekeepingRepository repository;
+    private final housekeepingInventoryUsageRepository usageRepository;
     private final guestService guestService;
+    private final inventoryService inventoryService;
 
     public List<housekeeping> getAllTasks() {
         return repository.findAll();
@@ -203,5 +208,26 @@ public class housekeepingService {
             throw new RuntimeException("Task not found.");
         }
         repository.deleteById(id);
+    }
+
+    public housekeepingInventoryUsage logInventoryUsage(int inventoryId, String staffName, int usedQty) {
+        if (staffName == null || staffName.isBlank()) {
+            throw new RuntimeException("Housekeeping staff is required.");
+        }
+
+        inventory updatedInventory = inventoryService.consumeStock(inventoryId, usedQty);
+
+        housekeepingInventoryUsage usage = new housekeepingInventoryUsage();
+        usage.setInventoryId(updatedInventory.getId());
+        usage.setItemName(updatedInventory.getItem());
+        usage.setStaffName(staffName.trim());
+        usage.setUsedQty(usedQty);
+        usage.setUsedAt(java.time.LocalDateTime.now());
+
+        return usageRepository.save(usage);
+    }
+
+    public List<housekeepingInventoryUsage> listInventoryUsageLogs() {
+        return usageRepository.findAllByOrderByUsedAtDesc();
     }
 }

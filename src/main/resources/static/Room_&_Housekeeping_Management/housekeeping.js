@@ -5,10 +5,19 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   loadAndRender();
+  loadUsageSection();
   attachEventListeners();
 });
 
 let housekeepingStaffOptions = [];
+
+function broadcastInventoryUpdate() {
+  try {
+    localStorage.setItem('inventoryUpdateSignal', String(Date.now()));
+  } catch {
+    // Storage may be blocked in some browser modes; polling still works.
+  }
+}
 
 async function loadAndRender() {
   try {
@@ -93,6 +102,7 @@ function attachEventListeners() {
 
   document.getElementById('addTaskForm').addEventListener('submit', handleAddSubmit);
   document.getElementById('updateTaskForm').addEventListener('submit', handleUpdateSubmit);
+  document.getElementById('usageForm').addEventListener('submit', handleUsageSubmit);
 
   document.getElementById('tasksTableBody').addEventListener('click', async (e) => {
     const action = e.target.dataset.action;
@@ -107,6 +117,174 @@ function attachEventListeners() {
       await handleDelete(id, requestLabel);
     }
   });
+}
+
+async function loadUsageSection() {
+  await Promise.all([
+    loadHousekeepingStaffDropdown('usageStaffName'),
+    loadInventoryItemDropdown(),
+    loadUsageLogs()
+  ]);
+}
+
+async function loadHousekeepingStaffDropdown(selectId) {
+  const select = document.getElementById(selectId);
+  if (!(select instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/auth/users');
+    if (!res.ok) {
+      throw new Error('Failed to load users.');
+    }
+
+    const users = await res.json();
+    const staff = (Array.isArray(users) ? users : [])
+      .filter((user) => Boolean(user?.status))
+      .filter((user) => normalizeRole(user?.role).includes('housekeeping'))
+      .map((user) => String(user?.username || '').trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    housekeepingStaffOptions = [...new Set(staff)];
+  } catch {
+    housekeepingStaffOptions = [];
+  }
+
+  if (!housekeepingStaffOptions.length) {
+    select.innerHTML = '<option value="">No active housekeeping staff found</option>';
+    return;
+  }
+
+  select.innerHTML = `
+    <option value="">Select housekeeping staff</option>
+    ${housekeepingStaffOptions.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('')}
+  `;
+}
+
+async function loadInventoryItemDropdown() {
+  const select = document.getElementById('usageInventoryItem');
+  if (!(select instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/inventory/list');
+    if (!res.ok) {
+      throw new Error('Failed to load inventory.');
+    }
+
+    const items = await res.json();
+    const sorted = (Array.isArray(items) ? items : []).sort((a, b) =>
+      String(a?.item || '').localeCompare(String(b?.item || ''))
+    );
+
+    if (!sorted.length) {
+      select.innerHTML = '<option value="">No inventory items found</option>';
+      return;
+    }
+
+    select.innerHTML = `
+      <option value="">Select inventory item</option>
+      ${sorted
+        .map((item) => `<option value="${Number(item.id)}">${escapeHtml(item.item)} (${Number(item.inStock || 0)} in stock)</option>`)
+        .join('')}
+    `;
+  } catch {
+    select.innerHTML = '<option value="">Could not load inventory items</option>';
+  }
+}
+
+async function loadUsageLogs() {
+  const tbody = document.getElementById('usageTableBody');
+  if (!(tbody instanceof HTMLElement)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/housekeeping/inventory-usage/list');
+    if (!res.ok) {
+      throw new Error('Failed to load usage logs.');
+    }
+
+    const rows = await res.json();
+    tbody.innerHTML = '';
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+            No inventory usage logs yet.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    rows.forEach((row) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(formatDateTime(row.usedAt))}</td>
+        <td>${escapeHtml(row.itemName)}</td>
+        <td>${escapeHtml(row.staffName)}</td>
+        <td>${Number(row.usedQty || 0)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+          Could not load usage logs.
+        </td>
+      </tr>
+    `;
+  }
+}
+
+async function handleUsageSubmit(event) {
+  event.preventDefault();
+
+  const inventoryId = Number(document.getElementById('usageInventoryItem').value);
+  const staffName = document.getElementById('usageStaffName').value;
+  const usedQty = Number(document.getElementById('usageQty').value);
+
+  if (!inventoryId) {
+    showMessage('Please select an inventory item.');
+    return;
+  }
+
+  if (!staffName) {
+    showMessage('Please select a housekeeping staff member.');
+    return;
+  }
+
+  if (!usedQty || usedQty < 1) {
+    showMessage('Used quantity must be at least 1.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/housekeeping/inventory-usage/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventoryId, staffName, usedQty })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      showMessage(data.message || 'Failed to log inventory usage.');
+      return;
+    }
+
+    document.getElementById('usageForm').reset();
+    showMessage(data.message || 'Inventory usage logged.');
+    broadcastInventoryUpdate();
+    await Promise.all([loadUsageLogs(), loadInventoryItemDropdown()]);
+  } catch {
+    showMessage('Error logging inventory usage.');
+  }
 }
 
 async function openAddDialog() {
@@ -143,39 +321,7 @@ function escapeAttr(value) {
 }
 
 async function loadHousekeepingStaffOptions() {
-  const select = document.getElementById('staffName');
-  if (!(select instanceof HTMLSelectElement)) {
-    return;
-  }
-
-  try {
-    const res = await fetch('/auth/users');
-    if (!res.ok) {
-      throw new Error('Failed to load users.');
-    }
-
-    const users = await res.json();
-    const staff = (Array.isArray(users) ? users : [])
-      .filter((user) => Boolean(user?.status))
-      .filter((user) => normalizeRole(user?.role).includes('housekeeping'))
-      .map((user) => String(user?.username || '').trim())
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-
-    housekeepingStaffOptions = [...new Set(staff)];
-  } catch {
-    housekeepingStaffOptions = [];
-  }
-
-  if (!housekeepingStaffOptions.length) {
-    select.innerHTML = '<option value="">No active housekeeping staff found</option>';
-    return;
-  }
-
-  select.innerHTML = `
-    <option value="">Select housekeeping staff</option>
-    ${housekeepingStaffOptions.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('')}
-  `;
+  await loadHousekeepingStaffDropdown('staffName');
 }
 
 async function fetchNextHousekeepingTaskId() {
@@ -360,6 +506,13 @@ function showMessage(message) {
   setTimeout(() => {
     messageEl.classList.remove('show');
   }, 3000);
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
 }
 
 function escapeHtml(text) {

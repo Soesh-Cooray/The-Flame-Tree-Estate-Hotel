@@ -1,6 +1,7 @@
 package project.flametreehotel.Services;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ public class inventoryApprovalNotificationService {
                     notification.setApprovedAt(LocalDateTime.now());
                     notification.setApprovedBy(approvedBy == null || approvedBy.isBlank() ? "Manager" : approvedBy);
                     notification.setNotificationStatus(STATUS_PENDING);
+                    notification.setSupplierPoDismissed(false);
                     notification.setLinkedOrderId(null);
                     return repository.save(notification);
                 });
@@ -48,7 +50,7 @@ public class inventoryApprovalNotificationService {
     }
 
     public List<Map<String, Object>> listOrderedWithOrderDetails() {
-        return repository.findByNotificationStatusOrderByApprovedAtDesc(STATUS_ORDERED).stream()
+        return repository.findByNotificationStatusAndSupplierPoDismissedFalseOrderByApprovedAtDesc(STATUS_ORDERED).stream()
                 .map(notification -> {
                     Map<String, Object> row = new HashMap<>();
                     row.put("id", notification.getId());
@@ -69,7 +71,36 @@ public class inventoryApprovalNotificationService {
                     row.put("poid", linkedOrder == null ? "" : linkedOrder.getPoid());
                     return row;
                 })
+                .filter(row -> Number.class.cast(row.get("orderedQty")).intValue() > 0)
                 .toList();
+    }
+
+    public int dismissOrderedNotifications(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+
+        List<Integer> cleanedIds = new ArrayList<>(
+                ids.stream().filter(id -> id != null && id > 0).distinct().toList());
+
+        if (cleanedIds.isEmpty()) {
+            return 0;
+        }
+
+        List<inventoryApprovalNotification> notifications = repository.findAllById(cleanedIds);
+        int updated = 0;
+        for (inventoryApprovalNotification notification : notifications) {
+            if (STATUS_ORDERED.equals(notification.getNotificationStatus()) && !notification.isSupplierPoDismissed()) {
+                notification.setSupplierPoDismissed(true);
+                updated += 1;
+            }
+        }
+
+        if (updated > 0) {
+            repository.saveAll(notifications);
+        }
+
+        return updated;
     }
 
     public List<Map<String, Object>> listReceivedWithOrderDetails() {

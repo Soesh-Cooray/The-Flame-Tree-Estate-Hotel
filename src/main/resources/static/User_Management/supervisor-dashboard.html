@@ -21,6 +21,7 @@
       <nav class="side-nav" aria-label="Supervisor navigation">
         <a href="#overview">Overview</a>
         <a href="#unified-panel">Unified Task Panel</a>
+        <a href="#inventory-usage-panel">Inventory Usage</a>
       </nav>
 
       <a class="back-link" href="index.html">Logout</a>
@@ -107,6 +108,22 @@
               </tr>
             </thead>
             <tbody id="approvalTaskTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-sub" id="inventory-usage-panel">
+          <h3>Inventory Usage</h3>
+          <p class="subtext">Track who used which inventory item and when it was logged by housekeeping.</p>
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th>Used At</th>
+                <th>Inventory Item</th>
+                <th>Housekeeping Staff</th>
+                <th>Used Qty</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryUsageTableBody"></tbody>
           </table>
         </div>
         <p id="taskActionMessage" aria-live="polite"></p>

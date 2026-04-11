@@ -54,6 +54,8 @@ let hasSupplierPoBaseline = false;
 let knownSupplierPoNotificationIds = new Set();
 let hasReceivedPoBaseline = false;
 let knownReceivedPoNotificationIds = new Set();
+let hasHousekeepingUsageBaseline = false;
+let knownHousekeepingUsageIds = new Set();
 let unseenNotificationCount = 0;
 
 const alertsBellBtn = document.getElementById('alertsBellBtn');
@@ -286,6 +288,42 @@ async function checkReceivedPoNotifications() {
   }
 }
 
+async function checkHousekeepingUsageNotifications() {
+  try {
+    const res = await fetch('/inventory/housekeeping-usage-notifications');
+    if (!res.ok) {
+      return;
+    }
+
+    const usageLogs = await res.json();
+    const currentIds = new Set(usageLogs.map((usage) => Number(usage.id)));
+
+    if (!hasHousekeepingUsageBaseline) {
+      knownHousekeepingUsageIds = currentIds;
+      hasHousekeepingUsageBaseline = true;
+      return;
+    }
+
+    const newUsageLogs = usageLogs.filter((usage) => !knownHousekeepingUsageIds.has(Number(usage.id)));
+    newUsageLogs.forEach((usage) => {
+      const itemName = String(usage?.itemName || 'Inventory item');
+      const staffName = String(usage?.staffName || 'Housekeeping staff');
+      const usedQty = Number(usage?.usedQty || 0);
+      const message = `${staffName} used ${usedQty} units of ${itemName} during housekeeping runs.`;
+
+      unseenNotificationCount += 1;
+      addNotificationFeedItem(message);
+      showToast('Housekeeping Usage', message);
+      tryShowBrowserNotification('Housekeeping Usage', message);
+    });
+
+    updateNotificationBadge();
+    knownHousekeepingUsageIds = currentIds;
+  } catch (err) {
+    console.error('Could not load housekeeping usage notifications', err);
+  }
+}
+
 async function pollDashboardLiveUpdates() {
   if (pollInFlight) {
     return;
@@ -298,7 +336,8 @@ async function pollDashboardLiveUpdates() {
       loadApprovalTables(),
       checkLowStockTransitions(),
       checkSupplierPoNotifications(),
-      checkReceivedPoNotifications()
+      checkReceivedPoNotifications(),
+      checkHousekeepingUsageNotifications()
     ]);
   } finally {
     pollInFlight = false;

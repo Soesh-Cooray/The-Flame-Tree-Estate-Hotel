@@ -24,5 +24,6 @@ public class inventoryApprovalNotification {
     private LocalDateTime receivedAt;
     private String approvedBy;
     private String notificationStatus;
+    private boolean supplierPoDismissed;
     private Integer linkedOrderId;
 }

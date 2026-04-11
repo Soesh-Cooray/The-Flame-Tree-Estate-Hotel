@@ -105,6 +105,26 @@ public class inventoryService {
         return approvedItem;
     }
 
+    public inventory consumeStock(int id, int usedQty) {
+        if (usedQty < 1) {
+            throw new RuntimeException("Used quantity must be at least 1.");
+        }
+
+        inventory item = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Inventory item not found."));
+
+        if (item.getInStock() < usedQty) {
+            throw new RuntimeException("Not enough stock available.");
+        }
+
+        int updatedStock = item.getInStock() - usedQty;
+        item.setInStock(updatedStock);
+        item.setApproved(false);
+        item.setStatus(computeStatus(updatedStock, item.getMinLevel(), item.getDamaged(), item.getMissing()));
+
+        return repository.save(item);
+    }
+
     private static final int LOW_STOCK_BUFFER = 10;
 
     private void validateStockBreakdown(int inStock, int damaged, int missing) {

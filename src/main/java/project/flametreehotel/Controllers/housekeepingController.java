@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import project.flametreehotel.Model.housekeeping;
+import project.flametreehotel.Model.housekeepingInventoryUsage;
 import project.flametreehotel.Services.housekeepingService;
 
 @RestController
@@ -29,6 +30,11 @@ public class housekeepingController {
     @GetMapping("/list")
     public ResponseEntity<List<housekeeping>> listHousekeeping() {
         return ResponseEntity.ok(service.getAllTasks());
+    }
+
+    @GetMapping("/inventory-usage/list")
+    public ResponseEntity<List<housekeepingInventoryUsage>> listInventoryUsage() {
+        return ResponseEntity.ok(service.listInventoryUsageLogs());
     }
 
     @GetMapping("/next-task-id")
@@ -181,6 +187,49 @@ public class housekeepingController {
             service.deleteTask(id);
             response.put("success", true);
             response.put("message", "Task deleted successfully.");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * POST /housekeeping/inventory-usage/add
+     * Body: { "inventoryId": 1, "staffName": "...", "usedQty": 2 }
+     */
+    @PostMapping("/inventory-usage/add")
+    public ResponseEntity<Map<String, Object>> addInventoryUsage(@RequestBody Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (body.get("inventoryId") == null) {
+            response.put("success", false);
+            response.put("message", "Inventory item is required.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        int inventoryId = ((Number) body.get("inventoryId")).intValue();
+        String staffName = String.valueOf(body.getOrDefault("staffName", "")).trim();
+        int usedQty = body.get("usedQty") != null ? ((Number) body.get("usedQty")).intValue() : 0;
+
+        if (staffName.isBlank()) {
+            response.put("success", false);
+            response.put("message", "Housekeeping staff is required.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        if (usedQty < 1) {
+            response.put("success", false);
+            response.put("message", "Used quantity must be at least 1.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        try {
+            housekeepingInventoryUsage usage = service.logInventoryUsage(inventoryId, staffName, usedQty);
+            response.put("success", true);
+            response.put("message", "Usage logged for " + usage.getItemName() + ".");
+            response.put("usage", usage);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             response.put("success", false);
