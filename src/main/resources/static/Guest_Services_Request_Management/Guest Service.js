@@ -5,8 +5,12 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   loadAndRender();
+  loadNotifications();
+  initRealtime();
   attachEventListeners();
 });
+
+let guestEventSource = null;
 
 async function loadAndRender() {
   try {
@@ -265,6 +269,93 @@ function showMessage(message) {
   setTimeout(() => {
     messageEl.classList.remove('show');
   }, 3000);
+}
+
+async function loadNotifications() {
+  try {
+    const res = await fetch('/workflow/notifications?audience=GUEST');
+    if (!res.ok) {
+      throw new Error('Failed to load notifications.');
+    }
+    const notifications = await res.json();
+    renderNotifications(notifications);
+  } catch {
+    renderNotifications([]);
+  }
+}
+
+function renderNotifications(notifications) {
+  const list = document.getElementById('notificationList');
+  if (!(list instanceof HTMLElement)) {
+    return;
+  }
+
+  const rows = Array.isArray(notifications) ? notifications : [];
+  if (!rows.length) {
+    list.innerHTML = '<li class="notification-item"><strong>No notifications yet.</strong><p>Workflow updates will appear here in real time.</p></li>';
+    return;
+  }
+
+  list.innerHTML = rows.slice(0, 12).map((item) => `
+    <li class="notification-item">
+      <strong>${escapeHtml(item.title || 'Update')}</strong>
+      <p>${escapeHtml(item.message || '')}</p>
+    </li>
+  `).join('');
+}
+
+function prependNotification(item) {
+  const list = document.getElementById('notificationList');
+  if (!(list instanceof HTMLElement)) {
+    return;
+  }
+
+  const first = list.firstElementChild;
+  const isEmpty = first && first.textContent && first.textContent.includes('No notifications yet.');
+  if (isEmpty) {
+    list.innerHTML = '';
+  }
+
+  const row = document.createElement('li');
+  row.className = 'notification-item';
+  row.innerHTML = `
+    <strong>${escapeHtml(item?.title || 'Update')}</strong>
+    <p>${escapeHtml(item?.message || '')}</p>
+  `;
+  list.prepend(row);
+
+  while (list.children.length > 12) {
+    list.removeChild(list.lastElementChild);
+  }
+}
+
+function initRealtime() {
+  if (guestEventSource) {
+    guestEventSource.close();
+  }
+
+  guestEventSource = new EventSource('/workflow/stream?audience=GUEST');
+
+  guestEventSource.addEventListener('notification', (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      prependNotification(payload);
+      loadAndRender();
+    } catch {
+      // Ignore malformed event payload.
+    }
+  });
+
+  guestEventSource.addEventListener('data-change', () => {
+    loadAndRender();
+  });
+
+  guestEventSource.onerror = () => {
+    if (guestEventSource) {
+      guestEventSource.close();
+    }
+    setTimeout(initRealtime, 2000);
+  };
 }
 
 function escapeHtml(text) {

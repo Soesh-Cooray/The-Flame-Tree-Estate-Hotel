@@ -343,6 +343,30 @@ th {
   display: block;
 }
 
+.notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.notification-item {
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.notification-item strong {
+  color: var(--tone-cream);
+}
+
+.notification-item p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
 @media (max-width: 720px) {
   .topbar {
     flex-direction: column;
