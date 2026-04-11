@@ -8,4 +8,6 @@ import project.flametreehotel.Model.workflowNotification;
 
 public interface workflowNotificationRepository extends JpaRepository<workflowNotification, Integer> {
     List<workflowNotification> findTop40ByAudienceOrderByCreatedAtDesc(String audience);
+
+    long deleteByAudience(String audience);
 }

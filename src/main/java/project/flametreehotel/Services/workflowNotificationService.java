@@ -52,6 +52,14 @@ public class workflowNotificationService {
         return repository.findTop40ByAudienceOrderByCreatedAtDesc(normalizeAudience(audience));
     }
 
+    public long clearByAudience(String audience) {
+        String normalizedAudience = normalizeAudience(audience);
+        long deletedCount = repository.deleteByAudience(normalizedAudience);
+
+        publishDataChange(List.of(normalizedAudience), "notifications", "");
+        return deletedCount;
+    }
+
     public void publishDataChange(List<String> audiences, String entity, String requestId) {
         if (audiences == null || audiences.isEmpty()) {
             return;
