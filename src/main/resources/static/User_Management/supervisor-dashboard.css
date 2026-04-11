@@ -389,6 +389,26 @@ body {
   gap: 10px;
 }
 
+.notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.clear-notifications-btn {
+  width: auto;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  background: rgba(200, 146, 255, 0.22);
+  color: var(--tone-gold);
+  border: 1px solid rgba(200, 146, 255, 0.5);
+}
+
+.clear-notifications-btn:hover {
+  background: rgba(200, 146, 255, 0.35);
+}
+
 .notification-item {
   border: 1px solid var(--stroke);
   background: rgba(255, 255, 255, 0.72);

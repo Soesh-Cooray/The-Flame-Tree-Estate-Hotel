@@ -93,6 +93,7 @@ function renderTable(tasks) {
 
 function attachEventListeners() {
   document.getElementById('openAddDialogBtn').addEventListener('click', openAddDialog);
+  document.getElementById('clearNotificationsBtn')?.addEventListener('click', clearNotifications);
   document.getElementById('requestType').addEventListener('change', toggleCustomRequestTypeInput);
 
   document.getElementById('cancelAddDialogBtn').addEventListener('click', () => {
@@ -120,6 +121,26 @@ function attachEventListeners() {
       await handleDelete(id, requestLabel);
     }
   });
+}
+
+async function clearNotifications() {
+  try {
+    const res = await fetch('/workflow/notifications/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audience: 'HOUSEKEEPING' }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to clear notifications.');
+    }
+
+    renderNotifications([]);
+    showMessage('Notifications cleared.');
+  } catch (error) {
+    showMessage(error.message || 'Failed to clear notifications.');
+  }
 }
 
 async function loadUsageSection() {

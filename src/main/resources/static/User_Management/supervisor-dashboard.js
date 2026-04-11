@@ -467,6 +467,8 @@ async function submitSupervisorDecision(source, id, decision) {
 }
 
 function attachListeners() {
+  document.getElementById('clearNotificationsBtn')?.addEventListener('click', clearNotifications);
+
   document.getElementById('refreshButton')?.addEventListener('click', (event) => {
     event.preventDefault();
     loadUnifiedData();
@@ -534,6 +536,26 @@ function attachListeners() {
       await submitSupervisorDecision(source, id, 'Rejected');
     }
   });
+}
+
+async function clearNotifications() {
+  try {
+    const res = await fetch('/workflow/notifications/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audience: 'SUPERVISOR' }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to clear notifications.');
+    }
+
+    renderNotifications([]);
+    showMessage('taskActionMessage', 'Notifications cleared.');
+  } catch (error) {
+    showMessage('taskActionMessage', error.message || 'Failed to clear notifications.');
+  }
 }
 
 attachListeners();

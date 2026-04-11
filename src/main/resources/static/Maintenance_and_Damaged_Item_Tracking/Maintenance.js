@@ -92,6 +92,26 @@ function showMessage(message) {
   maintenanceMessage.textContent = message;
 }
 
+async function clearNotifications() {
+  try {
+    const res = await fetch('/workflow/notifications/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audience: 'MAINTENANCE' }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to clear notifications.');
+    }
+
+    renderNotifications([]);
+    showMessage('Notifications cleared.');
+  } catch (error) {
+    showMessage(error.message || 'Failed to clear notifications.');
+  }
+}
+
 async function loadNotifications() {
   try {
     const res = await fetch('/workflow/notifications?audience=MAINTENANCE');
@@ -459,3 +479,4 @@ loadMaintenanceStaffOptions();
 loadAndRender();
 loadNotifications();
 initRealtime();
+document.getElementById('clearNotificationsBtn')?.addEventListener('click', clearNotifications);
