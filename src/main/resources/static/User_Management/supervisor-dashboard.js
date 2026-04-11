@@ -31,10 +31,21 @@ function normalize(value) {
   return String(value ?? '').trim().toLowerCase();
 }
 
+let toastTimeout;
 function showMessage(id, message) {
   const el = document.getElementById(id);
   if (el) {
     el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => {
+        if (!el.classList.contains('show')) {
+          el.textContent = '';
+        }
+      }, 400); // Wait for transition
+    }, 4000); // Display time
   }
 }
 
@@ -545,16 +556,27 @@ async function clearNotifications() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ audience: 'SUPERVISOR' }),
     });
-    const data = await res.json();
+    let data = {};
+    const raw = await res.text();
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { message: 'Unexpected server response while clearing notifications.' };
+      }
+    }
 
-    if (!res.ok || !data.success) {
+    if (!res.ok || data.success === false) {
       throw new Error(data.message || 'Failed to clear notifications.');
     }
 
     renderNotifications([]);
     showMessage('taskActionMessage', 'Notifications cleared.');
   } catch (error) {
-    showMessage('taskActionMessage', error.message || 'Failed to clear notifications.');
+    const reason = error?.message === 'Failed to fetch'
+      ? 'Cannot reach server. Open this page from http://localhost:8080 and make sure backend is running.'
+      : (error.message || 'Failed to clear notifications.');
+    showMessage('taskActionMessage', reason);
   }
 }
 
