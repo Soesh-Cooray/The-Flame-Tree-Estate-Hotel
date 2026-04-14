@@ -66,6 +66,7 @@ let latestApprovalNotifications = [];
 let latestSupplierPoNotifications = [];
 let latestReceivedPoNotifications = [];
 let latestHousekeepingUsageNotifications = [];
+let inventoryItemsCache = [];
 
 function loadClearedIdSet(storageKey) {
   try {
@@ -665,6 +666,7 @@ async function loadAndRender() {
     const res = await fetch('/inventory/list');
     if (!res.ok) throw new Error('Failed to load inventory.');
     const items = await res.json();
+    inventoryItemsCache = Array.isArray(items) ? items : [];
     renderAll(items);
   } catch (err) {
     showMessage('Error loading inventory: ' + err.message);
@@ -743,17 +745,11 @@ inventoryTableBody.addEventListener('click', async (event) => {
   const id = Number(idValue);
 
   if (action === 'edit') {
-    try {
-      const res = await fetch('/inventory/list');
-      const items = await res.json();
-      const item = items.find((i) => i.id === id);
-      if (item) {
-        openUpdateDialog(item);
-      } else {
-        showMessage('Unable to find selected item.');
-      }
-    } catch {
-      showMessage('Error fetching item details.');
+    const item = inventoryItemsCache.find((i) => Number(i?.id) === id);
+    if (item) {
+      openUpdateDialog(item);
+    } else {
+      showMessage('Unable to find selected item. Please refresh the inventory list.');
     }
     return;
   }
@@ -772,9 +768,10 @@ inventoryTableBody.addEventListener('click', async (event) => {
       const data = await res.json();
       showMessage(data.message || 'Item deleted.');
       if (data.success) {
+        inventoryItemsCache = inventoryItemsCache.filter((item) => Number(item?.id) !== id);
+        renderAll(inventoryItemsCache);
         broadcastInventoryUpdate();
       }
-      await loadAndRender();
     } catch {
       showMessage('Error deleting item.');
     }
@@ -798,6 +795,11 @@ addItemForm.addEventListener('submit', async (event) => {
   };
 
   try {
+    const submitBtn = addItemForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+
     const res = await fetch('/inventory/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -810,13 +812,26 @@ addItemForm.addEventListener('submit', async (event) => {
       return;
     }
 
+    if (data.item && Number.isInteger(Number(data.item.id))) {
+      const newId = Number(data.item.id);
+      const exists = inventoryItemsCache.some((item) => Number(item?.id) === newId);
+      if (!exists) {
+        inventoryItemsCache.push(data.item);
+      }
+      renderAll(inventoryItemsCache);
+    }
+
     addItemForm.reset();
     addItemDialog.close();
     showMessage(data.message || 'Item added.');
     broadcastInventoryUpdate();
-    await loadAndRender();
   } catch {
     showMessage('Error adding item.');
+  } finally {
+    const submitBtn = addItemForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
   }
 });
 
@@ -849,6 +864,11 @@ updateItemForm.addEventListener('submit', async (event) => {
   }
 
   try {
+    const submitBtn = updateItemForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+
     const res = await fetch('/inventory/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -865,13 +885,28 @@ updateItemForm.addEventListener('submit', async (event) => {
       return;
     }
 
+    if (data.item && Number.isInteger(Number(data.item.id))) {
+      const updatedId = Number(data.item.id);
+      const existingIndex = inventoryItemsCache.findIndex((i) => Number(i?.id) === updatedId);
+      if (existingIndex >= 0) {
+        inventoryItemsCache[existingIndex] = data.item;
+      } else {
+        inventoryItemsCache.push(data.item);
+      }
+      renderAll(inventoryItemsCache);
+    }
+
     updateItemForm.reset();
     updateItemDialog.close();
     showMessage(data.message || 'Item updated.');
     broadcastInventoryUpdate();
-    await loadAndRender();
   } catch {
     showMessage('Error updating item.');
+  } finally {
+    const submitBtn = updateItemForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
   }
 });
 

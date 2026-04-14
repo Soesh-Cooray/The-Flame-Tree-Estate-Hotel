@@ -12,6 +12,9 @@ let supplierBaselineSet = false;
 let knownSupplierApprovalIds = new Set();
 let clearedSupplierApprovalIds = new Set();
 let latestSupplierNotifications = [];
+let purchaseOrdersCache = [];
+let nextPoIdCache = '';
+let nextPoIdInFlight = null;
 
 const supplierApprovalBadge = document.getElementById('supplierApprovalBadge');
 const supplierApprovalFeed = document.getElementById('supplierApprovalFeed');
@@ -30,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Promise.all([loadAndRender(), loadNotifications()]);
   attachEventListeners();
   startSupplierApprovalPolling();
+  primeNextPoId();
 });
 
 async function loadAndRender() {
@@ -37,6 +41,7 @@ async function loadAndRender() {
     const res = await fetch('/orders/list');
     if (!res.ok) throw new Error('Failed to load purchase orders.');
     const pos = await res.json();
+    purchaseOrdersCache = Array.isArray(pos) ? pos : [];
     renderMetrics(pos);
     renderTable(pos);
   } catch (err) {
@@ -100,6 +105,7 @@ async function loadNotifications() {
     const res = await fetch('/inventory/approved-low-stock-notifications');
     if (!res.ok) throw new Error('Failed to load low stock notifications.');
     const notifications = await res.json();
+    latestSupplierNotifications = Array.isArray(notifications) ? notifications : [];
     renderNotifications(notifications);
     return notifications;
   } catch (err) {
@@ -313,17 +319,34 @@ async function fetchNextPoId() {
   return data.poid || '';
 }
 
+async function primeNextPoId(force = false) {
+  if (!force && nextPoIdCache) {
+    return nextPoIdCache;
+  }
+
+  if (nextPoIdInFlight) {
+    return nextPoIdInFlight;
+  }
+
+  nextPoIdInFlight = fetchNextPoId()
+    .then((poid) => {
+      nextPoIdCache = poid;
+      return poid;
+    })
+    .finally(() => {
+      nextPoIdInFlight = null;
+    });
+
+  return nextPoIdInFlight;
+}
+
 async function openAddDialog(prefill = null) {
   document.getElementById('addPoForm').reset();
   selectedNotificationId = null;
 
-  try {
-    const nextPoId = await fetchNextPoId();
-    document.getElementById('poId').value = nextPoId;
-  } catch {
-    showMessage('Could not generate PO ID. Please try again.');
-    return;
-  }
+  const poIdInput = document.getElementById('poId');
+  poIdInput.value = nextPoIdCache || '';
+  poIdInput.placeholder = nextPoIdCache ? 'Auto-generated' : 'Generating PO ID...';
 
   if (prefill) {
     selectedNotificationId = prefill.notificationId || null;
@@ -333,6 +356,18 @@ async function openAddDialog(prefill = null) {
   }
 
   document.getElementById('addPoDialog').showModal();
+
+  try {
+    const nextPoId = await primeNextPoId();
+    if (document.getElementById('addPoDialog').open) {
+      poIdInput.value = nextPoId;
+      poIdInput.placeholder = 'Auto-generated';
+    }
+  } catch {
+    if (document.getElementById('addPoDialog').open) {
+      showMessage('Could not generate PO ID. Please try again.');
+    }
+  }
 }
 
 async function openUpdateDialog(id) {
@@ -362,9 +397,17 @@ async function openUpdateDialog(id) {
 async function handleAddSubmit(e) {
   e.preventDefault();
 
+  const submitBtn = document.querySelector('#addPoForm button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+  }
+
   const poid = document.getElementById('poId').value.trim();
   if (!poid) {
     showMessage('Please enter a valid PO ID.');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
     return;
   }
 
@@ -387,19 +430,50 @@ async function handleAddSubmit(e) {
 
     if (!data.success) {
       showMessage(data.message || 'Failed to add purchase order.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+      }
       return;
+    }
+
+    if (data.order && Number.isInteger(Number(data.order.id))) {
+      const newId = Number(data.order.id);
+      const exists = purchaseOrdersCache.some((order) => Number(order?.id) === newId);
+      if (!exists) {
+        purchaseOrdersCache.push(data.order);
+      }
+      renderMetrics(purchaseOrdersCache);
+      renderTable(purchaseOrdersCache);
+    }
+
+    if (payload.notificationId) {
+      const notificationId = Number(payload.notificationId);
+      latestSupplierNotifications = latestSupplierNotifications.filter(
+        (notification) => Number(notification.id) !== notificationId
+      );
+      const visibleNotifications = latestSupplierNotifications.filter(
+        (notification) => !clearedSupplierApprovalIds.has(Number(notification.id))
+      );
+      renderNotifications(latestSupplierNotifications);
+      renderSupplierApprovalFeed(visibleNotifications);
+      updateSupplierApprovalBadge(visibleNotifications.length);
     }
 
     document.getElementById('addPoDialog').close();
     document.getElementById('addPoForm').reset();
     selectedNotificationId = null;
+    nextPoIdCache = '';
     showMessage(data.message || 'Purchase order added successfully!');
     if (payload.notificationId) {
       broadcastInventoryUpdate();
     }
-    await Promise.all([loadAndRender(), loadNotifications()]);
+    primeNextPoId(true);
   } catch {
     showMessage('Error adding purchase order.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
   }
 }
 
