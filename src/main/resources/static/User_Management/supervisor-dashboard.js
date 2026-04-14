@@ -250,6 +250,11 @@ function renderMetrics(rows) {
   setMetric('rejectedMetric', rejected);
 }
 
+function isUnassignedGuestRequest(row) {
+  const assignedTo = normalize(row?.assignedTo);
+  return !assignedTo || assignedTo === 'unassigned';
+}
+
 function assignmentFilteredRows() {
   const view = document.getElementById('viewFilter')?.value || 'guest-pending';
   const department = document.getElementById('departmentFilter')?.value || 'all';
@@ -257,6 +262,10 @@ function assignmentFilteredRows() {
 
   return state.rows.filter((row) => {
     if (row.source !== 'GUEST') {
+      return false;
+    }
+
+    if (!isUnassignedGuestRequest(row)) {
       return false;
     }
 

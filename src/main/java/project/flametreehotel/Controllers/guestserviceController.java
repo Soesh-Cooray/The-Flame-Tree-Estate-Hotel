@@ -53,6 +53,7 @@ public class guestserviceController {
 
         List<Map<String, Object>> guestPending = service.getAllRequests().stream()
             .filter(request -> "Pending".equalsIgnoreCase(String.valueOf(request.getStatus())))
+            .filter(request -> request.getRoutedModule() == null || request.getRoutedModule().isBlank())
             .map(request -> buildTaskMap(
                 "GUEST",
                 "Guest Service",

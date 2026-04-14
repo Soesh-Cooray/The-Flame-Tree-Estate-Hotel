@@ -30,8 +30,8 @@ public class workflowRealtimeService {
                     .data(Map.of(
                             "audience", key,
                             "connectedAt", LocalDateTime.now().toString())));
-        } catch (IOException ex) {
-            removeEmitter(key, emitter);
+        } catch (IOException | IllegalStateException ex) {
+            safelyRemoveEmitter(key, emitter);
         }
 
         return emitter;
@@ -53,9 +53,18 @@ public class workflowRealtimeService {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name(eventName).data(payload));
-            } catch (IOException ex) {
-                removeEmitter(audience, emitter);
+            } catch (IOException | IllegalStateException ex) {
+                safelyRemoveEmitter(audience, emitter);
             }
+        }
+    }
+
+    private void safelyRemoveEmitter(String audience, SseEmitter emitter) {
+        removeEmitter(audience, emitter);
+        try {
+            emitter.complete();
+        } catch (Exception ignored) {
+            // Ignore completion failures for disconnected clients.
         }
     }
 
