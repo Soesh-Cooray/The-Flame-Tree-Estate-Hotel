@@ -20,5 +20,6 @@ public class housekeepingInventoryUsage {
     private String itemName;
     private String staffName;
     private int usedQty;
+    private int damagedQty;
     private LocalDateTime usedAt;
 }

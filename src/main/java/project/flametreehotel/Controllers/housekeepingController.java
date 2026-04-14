@@ -197,7 +197,7 @@ public class housekeepingController {
 
     /**
      * POST /housekeeping/inventory-usage/add
-     * Body: { "inventoryId": 1, "staffName": "...", "usedQty": 2 }
+        * Body: { "inventoryId": 1, "staffName": "...", "usedQty": 2, "damagedQty": 0 }
      */
     @PostMapping("/inventory-usage/add")
     public ResponseEntity<Map<String, Object>> addInventoryUsage(@RequestBody Map<String, Object> body) {
@@ -212,6 +212,7 @@ public class housekeepingController {
         int inventoryId = ((Number) body.get("inventoryId")).intValue();
         String staffName = String.valueOf(body.getOrDefault("staffName", "")).trim();
         int usedQty = body.get("usedQty") != null ? ((Number) body.get("usedQty")).intValue() : 0;
+        int damagedQty = body.get("damagedQty") != null ? ((Number) body.get("damagedQty")).intValue() : 0;
 
         if (staffName.isBlank()) {
             response.put("success", false);
@@ -225,8 +226,14 @@ public class housekeepingController {
             return ResponseEntity.badRequest().body(response);
         }
 
+        if (damagedQty < 0) {
+            response.put("success", false);
+            response.put("message", "Damaged quantity cannot be negative.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
         try {
-            housekeepingInventoryUsage usage = service.logInventoryUsage(inventoryId, staffName, usedQty);
+            housekeepingInventoryUsage usage = service.logInventoryUsage(inventoryId, staffName, usedQty, damagedQty);
             response.put("success", true);
             response.put("message", "Usage logged for " + usage.getItemName() + ".");
             response.put("usage", usage);

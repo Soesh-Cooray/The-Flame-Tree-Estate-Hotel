@@ -110,21 +110,35 @@ public class inventoryService {
     }
 
     public inventory consumeStock(int id, int usedQty) {
+        return consumeStock(id, usedQty, 0);
+    }
+
+    public inventory consumeStock(int id, int usedQty, int damagedQty) {
         if (usedQty < 1) {
             throw new RuntimeException("Used quantity must be at least 1.");
+        }
+
+        if (damagedQty < 0) {
+            throw new RuntimeException("Damaged quantity cannot be negative.");
         }
 
         inventory item = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Inventory item not found."));
 
-        if (item.getInStock() < usedQty) {
+        int currentUsable = Math.max(0, item.getInStock() - Math.max(0, item.getDamaged()) - Math.max(0, item.getMissing()));
+        if (currentUsable < usedQty) {
             throw new RuntimeException("Not enough stock available.");
         }
 
         int updatedStock = item.getInStock() - usedQty;
+        int updatedDamaged = item.getDamaged() + damagedQty;
+
+        validateStockBreakdown(updatedStock, updatedDamaged, item.getMissing());
+
         item.setInStock(updatedStock);
+        item.setDamaged(updatedDamaged);
         item.setApproved(false);
-        item.setStatus(computeStatus(updatedStock, item.getMinLevel(), item.getDamaged(), item.getMissing()));
+        item.setStatus(computeStatus(updatedStock, item.getMinLevel(), updatedDamaged, item.getMissing()));
 
         return repository.save(item);
     }

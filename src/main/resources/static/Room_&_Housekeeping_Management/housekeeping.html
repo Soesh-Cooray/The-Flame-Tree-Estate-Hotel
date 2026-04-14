@@ -98,6 +98,10 @@
             <label for="usageQty">Used Quantity</label>
             <input id="usageQty" type="number" min="1" placeholder="0" required />
           </div>
+          <div>
+            <label for="usageDamagedQty">Damaged Quantity</label>
+            <input id="usageDamagedQty" type="number" min="0" placeholder="0" value="0" />
+          </div>
           <div class="usage-form-action">
             <button type="submit">Log Usage</button>
           </div>
@@ -111,6 +115,7 @@
                 <th>Inventory Item</th>
                 <th>Housekeeping Staff</th>
                 <th>Used Qty</th>
+                <th>Damaged Qty</th>
               </tr>
             </thead>
             <tbody id="usageTableBody"></tbody>

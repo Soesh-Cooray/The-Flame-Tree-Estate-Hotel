@@ -249,7 +249,7 @@ async function loadUsageLogs() {
     if (!Array.isArray(rows) || rows.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
             No inventory usage logs yet.
           </td>
         </tr>
@@ -264,13 +264,14 @@ async function loadUsageLogs() {
         <td>${escapeHtml(row.itemName)}</td>
         <td>${escapeHtml(row.staffName)}</td>
         <td>${Number(row.usedQty || 0)}</td>
+        <td>${Number(row.damagedQty || 0)}</td>
       `;
       tbody.appendChild(tr);
     });
   } catch {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
           Could not load usage logs.
         </td>
       </tr>
@@ -284,6 +285,7 @@ async function handleUsageSubmit(event) {
   const inventoryId = Number(document.getElementById('usageInventoryItem').value);
   const staffName = document.getElementById('usageStaffName').value;
   const usedQty = Number(document.getElementById('usageQty').value);
+  const damagedQty = Number(document.getElementById('usageDamagedQty').value || 0);
 
   if (!inventoryId) {
     showMessage('Please select an inventory item.');
@@ -300,11 +302,16 @@ async function handleUsageSubmit(event) {
     return;
   }
 
+  if (!Number.isFinite(damagedQty) || damagedQty < 0) {
+    showMessage('Damaged quantity cannot be negative.');
+    return;
+  }
+
   try {
     const res = await fetch('/housekeeping/inventory-usage/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inventoryId, staffName, usedQty })
+      body: JSON.stringify({ inventoryId, staffName, usedQty, damagedQty })
     });
 
     const data = await res.json();
@@ -314,9 +321,13 @@ async function handleUsageSubmit(event) {
     }
 
     document.getElementById('usageForm').reset();
+    const damagedInput = document.getElementById('usageDamagedQty');
+    if (damagedInput instanceof HTMLInputElement) {
+      damagedInput.value = '0';
+    }
     showMessage(data.message || 'Inventory usage logged.');
     broadcastInventoryUpdate();
-    await Promise.all([loadUsageLogs(), loadInventoryItemDropdown()]);
+    await Promise.all([loadUsageLogs(), loadInventoryItemDropdown(), loadAndRender()]);
   } catch {
     showMessage('Error logging inventory usage.');
   }

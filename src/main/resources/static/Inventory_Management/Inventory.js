@@ -389,10 +389,12 @@ function renderHousekeepingUsageFeed(notifications) {
     const itemName = String(usage?.itemName || 'Inventory item');
     const staffName = String(usage?.staffName || 'Housekeeping staff');
     const usedQty = Number(usage?.usedQty || 0);
+    const damagedQty = Number(usage?.damagedQty || 0);
     const usedAt = formatDateTime(usage?.usedAt);
+    const damagedSuffix = damagedQty > 0 ? ` and reported ${damagedQty} damaged` : '';
 
     const li = document.createElement('li');
-    li.textContent = `${staffName} used ${usedQty} units of ${itemName} at ${usedAt}.`;
+    li.textContent = `${staffName} used ${usedQty} units of ${itemName}${damagedSuffix} at ${usedAt}.`;
     inventoryUsageList.appendChild(li);
   });
 }
@@ -556,10 +558,12 @@ async function pollHousekeepingUsageNotificationsForInventory() {
       const itemName = String(usage?.itemName || 'Inventory item');
       const staffName = String(usage?.staffName || 'Housekeeping staff');
       const usedQty = Number(usage?.usedQty || 0);
+      const damagedQty = Number(usage?.damagedQty || 0);
+      const damagedSuffix = damagedQty > 0 ? ` Damaged reported: ${damagedQty}.` : '';
 
       showInventoryToast(
         'Housekeeping Usage',
-        `${staffName} used ${usedQty} units of ${itemName} during housekeeping runs.`
+        `${staffName} used ${usedQty} units of ${itemName} during housekeeping runs.${damagedSuffix}`
       );
     });
 

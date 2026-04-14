@@ -301,18 +301,23 @@ public class housekeepingService {
             existing.getRequestId());
     }
 
-    public housekeepingInventoryUsage logInventoryUsage(int inventoryId, String staffName, int usedQty) {
+    public housekeepingInventoryUsage logInventoryUsage(int inventoryId, String staffName, int usedQty, int damagedQty) {
         if (staffName == null || staffName.isBlank()) {
             throw new RuntimeException("Housekeeping staff is required.");
         }
 
-        inventory updatedInventory = inventoryService.consumeStock(inventoryId, usedQty);
+        if (damagedQty < 0) {
+            throw new RuntimeException("Damaged quantity cannot be negative.");
+        }
+
+        inventory updatedInventory = inventoryService.consumeStock(inventoryId, usedQty, damagedQty);
 
         housekeepingInventoryUsage usage = new housekeepingInventoryUsage();
         usage.setInventoryId(updatedInventory.getId());
         usage.setItemName(updatedInventory.getItem());
         usage.setStaffName(staffName.trim());
         usage.setUsedQty(usedQty);
+        usage.setDamagedQty(damagedQty);
         usage.setUsedAt(java.time.LocalDateTime.now());
 
         return usageRepository.save(usage);

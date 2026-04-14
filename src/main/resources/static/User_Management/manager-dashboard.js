@@ -379,7 +379,9 @@ async function checkHousekeepingUsageNotifications() {
       const itemName = String(usage?.itemName || 'Inventory item');
       const staffName = String(usage?.staffName || 'Housekeeping staff');
       const usedQty = Number(usage?.usedQty || 0);
-      const message = `${staffName} used ${usedQty} units of ${itemName} during housekeeping runs.`;
+      const damagedQty = Number(usage?.damagedQty || 0);
+      const damagedSuffix = damagedQty > 0 ? ` and reported ${damagedQty} damaged` : '';
+      const message = `${staffName} used ${usedQty} units of ${itemName}${damagedSuffix} during housekeeping runs.`;
 
       unseenNotificationCount += 1;
       addNotificationFeedItem(message);
