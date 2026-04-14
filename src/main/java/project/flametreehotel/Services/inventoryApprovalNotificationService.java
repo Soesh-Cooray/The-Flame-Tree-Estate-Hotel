@@ -26,8 +26,22 @@ public class inventoryApprovalNotificationService {
     private final inventoryApprovalNotificationRepository repository;
     private final ordersRepository ordersRepository;
 
-    public inventoryApprovalNotification createFromApprovedInventory(inventory item, String approvedBy) {
+    public inventoryApprovalNotification createFromApprovedInventory(inventory item, String approvedBy, int approvedQty) {
+        int normalizedApprovedQty = Math.max(1, approvedQty);
+        String approver = approvedBy == null || approvedBy.isBlank() ? "Manager" : approvedBy;
+
         return repository.findFirstByInventoryIdAndNotificationStatusOrderByIdDesc(item.getId(), STATUS_PENDING)
+                .map(notification -> {
+                    notification.setItemName(item.getItem());
+                    notification.setCategory(item.getCategory());
+                    notification.setInStock(item.getInStock());
+                    notification.setMinLevel(item.getMinLevel());
+                    notification.setSuggestedQty(normalizedApprovedQty);
+                    notification.setApprovedAt(LocalDateTime.now());
+                    notification.setApprovedBy(approver);
+                    notification.setSupplierPoDismissed(false);
+                    return repository.save(notification);
+                })
                 .orElseGet(() -> {
                     inventoryApprovalNotification notification = new inventoryApprovalNotification();
                     notification.setInventoryId(item.getId());
@@ -35,9 +49,9 @@ public class inventoryApprovalNotificationService {
                     notification.setCategory(item.getCategory());
                     notification.setInStock(item.getInStock());
                     notification.setMinLevel(item.getMinLevel());
-                    notification.setSuggestedQty(calculateSuggestedQty(item));
+                    notification.setSuggestedQty(normalizedApprovedQty);
                     notification.setApprovedAt(LocalDateTime.now());
-                    notification.setApprovedBy(approvedBy == null || approvedBy.isBlank() ? "Manager" : approvedBy);
+                    notification.setApprovedBy(approver);
                     notification.setNotificationStatus(STATUS_PENDING);
                     notification.setSupplierPoDismissed(false);
                     notification.setLinkedOrderId(null);
@@ -159,9 +173,4 @@ public class inventoryApprovalNotificationService {
         repository.save(notification);
     }
 
-    private int calculateSuggestedQty(inventory item) {
-        int usableStock = Math.max(0, item.getInStock() - Math.max(0, item.getDamaged()) - Math.max(0, item.getMissing()));
-        int targetLevel = Math.max(0, item.getMinLevel()) + 10;
-        return Math.max(1, targetLevel - usableStock);
-    }
 }

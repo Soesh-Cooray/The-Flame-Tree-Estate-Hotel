@@ -300,8 +300,9 @@ function renderApprovalFeed(notifications) {
   }
 
   notifications.slice(0, MAX_APPROVAL_FEED_ITEMS).forEach((notification) => {
+    const approvedQty = Number(notification?.suggestedQty ?? 1);
     const li = document.createElement('li');
-    li.textContent = `Manager approved ${notification.itemName} for restocking at ${formatDateTime(notification.approvedAt)}.`;
+    li.textContent = `Manager approved ${notification.itemName} for ${approvedQty} units at ${formatDateTime(notification.approvedAt)}.`;
     inventoryApprovalList.appendChild(li);
   });
 }
@@ -422,9 +423,10 @@ async function pollManagerApprovals() {
 
     const newNotifications = notifications.filter((notification) => !knownApprovalIds.has(Number(notification.id)));
     newNotifications.forEach((notification) => {
+      const approvedQty = Number(notification?.suggestedQty ?? 1);
       showInventoryToast(
         'Manager Approval Received',
-        `${notification.itemName} low-stock request was approved by ${notification.approvedBy || 'Manager'}.`
+        `${notification.itemName} low-stock request was approved by ${notification.approvedBy || 'Manager'} for ${approvedQty} units.`
       );
     });
 

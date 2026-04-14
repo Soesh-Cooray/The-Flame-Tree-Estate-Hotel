@@ -95,13 +95,17 @@ public class inventoryService {
                 .toList();
     }
 
-    public inventory approveItem(int id) {
+    public inventory approveItem(int id, int approvedQty) {
+        if (approvedQty < 1) {
+            throw new RuntimeException("Approved quantity must be at least 1.");
+        }
+
         inventory item = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item not found."));
         item.setApproved(true);
         item.setStatus("Pending");
         inventory approvedItem = repository.save(item);
-        notificationService.createFromApprovedInventory(approvedItem, "Manager");
+        notificationService.createFromApprovedInventory(approvedItem, "Manager", approvedQty);
         return approvedItem;
     }
 

@@ -128,8 +128,9 @@ function renderSupplierApprovalFeed(notifications) {
   }
 
   notifications.slice(0, MAX_SUPPLIER_FEED_ITEMS).forEach((notification) => {
+    const approvedQty = Number(notification?.suggestedQty ?? 1);
     const li = document.createElement('li');
-    li.textContent = `${notification.itemName} was approved by ${notification.approvedBy || 'Manager'} at ${formatDateTime(notification.approvedAt)}.`;
+    li.textContent = `${notification.itemName} was approved by ${notification.approvedBy || 'Manager'} for ${approvedQty} units at ${formatDateTime(notification.approvedAt)}.`;
     supplierApprovalFeed.appendChild(li);
   });
 }
@@ -174,9 +175,10 @@ async function pollSupplierApprovals() {
 
   const newApprovals = notifications.filter((notification) => !knownSupplierApprovalIds.has(Number(notification.id)));
   newApprovals.forEach((notification) => {
+    const approvedQty = Number(notification?.suggestedQty ?? 1);
     showSupplierToast(
       'Manager Approval Received',
-      `${notification.itemName} low-stock request is approved and ready for PO creation.`
+      `${notification.itemName} low-stock request was approved for ${approvedQty} units and is ready for PO creation.`
     );
   });
 

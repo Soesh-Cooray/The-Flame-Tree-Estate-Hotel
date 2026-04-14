@@ -180,6 +180,16 @@ function normalizeRole(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function suggestedApprovalQty(item) {
+  const inStock = Number(item?.inStock || 0);
+  const damaged = Number(item?.damaged || 0);
+  const missing = Number(item?.missing || 0);
+  const minLevel = Number(item?.minLevel || 0);
+  const usableStock = Math.max(0, inStock - Math.max(0, damaged) - Math.max(0, missing));
+  const targetLevel = Math.max(0, minLevel) + 10;
+  return Math.max(1, targetLevel - usableStock);
+}
+
 function hydrateAssignmentStaff(users) {
   const safeUsers = Array.isArray(users) ? users : [];
   const activeUsers = safeUsers.filter((user) => Boolean(user?.status));
@@ -566,7 +576,11 @@ function setupNotificationInteractions() {
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
+    if (
+      document.visibilityState === 'visible'
+      && notificationsModal
+      && notificationsModal.hidden === false
+    ) {
       markNotificationsSeen();
     }
   });
@@ -622,7 +636,9 @@ async function loadApprovalTables() {
 
     const housekeepingBody = document.getElementById('housekeepingApprovalTableBody');
     if (housekeepingBody) {
-      const completedTasks = housekeepingTasks.filter((task) => String(task.taskStatus).toLowerCase() === 'completed');
+      const completedTasks = housekeepingTasks.filter(
+        (task) => String(task.taskStatus).toLowerCase() === 'completed' && !Boolean(task.approved)
+      );
       housekeepingBody.innerHTML = completedTasks.length
         ? completedTasks.map((task) => `
           <tr>
@@ -633,7 +649,7 @@ async function loadApprovalTables() {
             <td><button type="button" class="approve-btn" data-module="housekeeping" data-id="${task.id}" data-approved="${task.approved ? 'false' : 'true'}">${task.approved ? 'Unapprove' : 'Approve'}</button></td>
           </tr>
         `).join('')
-        : '<tr><td colspan="5">No completed housekeeping tasks pending approval.</td></tr>';
+        : '<tr><td colspan="5">No completed housekeeping tasks awaiting approval.</td></tr>';
     }
 
     const maintenanceBody = document.getElementById('maintenanceApprovalTableBody');
@@ -662,17 +678,27 @@ async function loadApprovalTables() {
             <td>${item.inStock}</td>
             <td>${item.minLevel}</td>
             <td><span class="status-pill watch">${escapeHtml(item.status)}</span></td>
+            <td>
+              <input
+                type="number"
+                class="inventory-approve-qty"
+                min="1"
+                step="1"
+                value="${suggestedApprovalQty(item)}"
+                aria-label="Order quantity for ${escapeHtml(item.item)}"
+              />
+            </td>
             <td><button type="button" class="approve-btn" data-module="inventory" data-id="${item.id}">Approve</button></td>
           </tr>
         `).join('')
-        : '<tr><td colspan="6">No low stock items awaiting approval.</td></tr>';
+        : '<tr><td colspan="7">No low stock items awaiting approval.</td></tr>';
     }
   } catch (err) {
     console.error('Could not load approval tables', err);
   }
 }
 
-async function updateApproval(moduleName, id, approved, rowElement = null) {
+async function updateApproval(moduleName, id, approved, rowElement = null, inventoryQty = null) {
   let url;
   if (moduleName === 'housekeeping') {
     url = '/housekeeping/approve';
@@ -685,7 +711,9 @@ async function updateApproval(moduleName, id, approved, rowElement = null) {
     return;
   }
 
-  const body = moduleName === 'inventory' ? { id } : { id, approved, role: currentRole };
+  const body = moduleName === 'inventory'
+    ? { id, qty: inventoryQty }
+    : { id, approved, role: currentRole };
   
   try {
     const data = await apiPost(url, body);
@@ -990,10 +1018,29 @@ document.addEventListener('click', async (event) => {
   const approved = String(target.dataset.approved) === 'true';
 
   if (!moduleName || Number.isNaN(id)) return;
+
+  let inventoryQty = null;
+  if (moduleName === 'inventory') {
+    const row = target.closest('tr');
+    const qtyInput = row?.querySelector('.inventory-approve-qty');
+    if (!(qtyInput instanceof HTMLInputElement)) {
+      alert('Could not read approval quantity.');
+      return;
+    }
+
+    const parsedQty = Number.parseInt(qtyInput.value, 10);
+    if (!Number.isFinite(parsedQty) || parsedQty < 1) {
+      alert('Please enter a valid quantity greater than 0 before approving.');
+      qtyInput.focus();
+      return;
+    }
+
+    inventoryQty = parsedQty;
+  }
   
   // Get the row element for immediate UI feedback
   const row = target.closest('tr');
-  await updateApproval(moduleName, id, approved, row);
+  await updateApproval(moduleName, id, approved, row, inventoryQty);
 });
 
 function formatDateTime(value) {

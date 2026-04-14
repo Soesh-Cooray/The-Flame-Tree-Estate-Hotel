@@ -151,7 +151,7 @@ public class inventroyController {
 
     /**
      * POST /inventory/approve
-     * Body: { "id": 1 }
+     * Body: { "id": 1, "qty": 20 }
      * Marks an item as approved and sets status to Pending.
      */
     @PostMapping("/approve")
@@ -164,10 +164,23 @@ public class inventroyController {
             return ResponseEntity.badRequest().body(response);
         }
 
+        if (!(body.get("qty") instanceof Number qtyNumber)) {
+            response.put("success", false);
+            response.put("message", "Approved quantity is required.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
         int id = ((Number) body.get("id")).intValue();
+        int qty = qtyNumber.intValue();
+
+        if (qty < 1) {
+            response.put("success", false);
+            response.put("message", "Approved quantity must be at least 1.");
+            return ResponseEntity.badRequest().body(response);
+        }
 
         try {
-            inventory approved = service.approveItem(id);
+            inventory approved = service.approveItem(id, qty);
             response.put("success", true);
             response.put("message", "Approved " + approved.getItem() + " for reordering.");
             response.put("item", approved);
