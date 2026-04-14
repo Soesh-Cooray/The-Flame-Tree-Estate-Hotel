@@ -135,6 +135,14 @@ public class maintenanceService {
                     "TASK_COMPLETED",
                     safeRequestId(saved),
                     "Maintenance");
+
+                notificationService.create(
+                    workflowNotificationService.AUDIENCE_MANAGER,
+                    "Maintenance Task Completed",
+                    "Task " + safeTaskCode(saved) + " was marked Completed by maintenance.",
+                    "TASK_COMPLETED",
+                    safeRequestId(saved),
+                    "Maintenance");
         }
 
             notificationService.publishDataChange(

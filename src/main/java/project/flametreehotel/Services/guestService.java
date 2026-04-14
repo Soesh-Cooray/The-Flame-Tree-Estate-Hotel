@@ -69,10 +69,19 @@ public class guestService {
             saved.getRequestId(),
             "Guest Service");
 
+        notificationService.create(
+            workflowNotificationService.AUDIENCE_MANAGER,
+            "New Guest Request",
+            "Guest request " + saved.getRequestId() + " was placed for " + saved.getRoomName() + ".",
+            "REQUEST_PLACED",
+            saved.getRequestId(),
+            "Guest Service");
+
         notificationService.publishDataChange(
             List.of(
                 workflowNotificationService.AUDIENCE_GUEST,
-                workflowNotificationService.AUDIENCE_SUPERVISOR),
+                workflowNotificationService.AUDIENCE_SUPERVISOR,
+                workflowNotificationService.AUDIENCE_MANAGER),
             "guest-request",
             saved.getRequestId());
 

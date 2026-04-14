@@ -17,6 +17,7 @@ public class workflowNotificationService {
 
     public static final String AUDIENCE_GUEST = "GUEST";
     public static final String AUDIENCE_SUPERVISOR = "SUPERVISOR";
+    public static final String AUDIENCE_MANAGER = "MANAGER";
     public static final String AUDIENCE_HOUSEKEEPING = "HOUSEKEEPING";
     public static final String AUDIENCE_MAINTENANCE = "MAINTENANCE";
 

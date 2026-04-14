@@ -134,6 +134,14 @@ public class housekeepingService {
                     "TASK_COMPLETED",
                     saved.getRequestId(),
                     "Housekeeping");
+
+                notificationService.create(
+                    workflowNotificationService.AUDIENCE_MANAGER,
+                    "Housekeeping Task Completed",
+                    "Task " + saved.getRequestId() + " was marked Completed by housekeeping.",
+                    "TASK_COMPLETED",
+                    saved.getRequestId(),
+                    "Housekeeping");
         }
 
             notificationService.publishDataChange(

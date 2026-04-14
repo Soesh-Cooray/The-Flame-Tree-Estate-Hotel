@@ -56,7 +56,17 @@ let hasReceivedPoBaseline = false;
 let knownReceivedPoNotificationIds = new Set();
 let hasHousekeepingUsageBaseline = false;
 let knownHousekeepingUsageIds = new Set();
+let hasGuestRequestBaseline = false;
+let knownGuestRequestNotificationIds = new Set();
+let hasTaskCompletionBaseline = false;
+let knownTaskCompletionNotificationIds = new Set();
 let unseenNotificationCount = 0;
+
+// Staff assignment tracking
+let assignmentStaff = {
+  housekeeping: [],
+  maintenance: [],
+};
 
 const alertsBellBtn = document.getElementById('alertsBellBtn');
 const alertsBellCounter = document.getElementById('alertsBellCounter');
@@ -164,6 +174,56 @@ function getInventoryKey(item) {
     return `id:${item.id}`;
   }
   return `name:${String(item?.item || '').trim().toLowerCase()}|category:${String(item?.category || '').trim().toLowerCase()}`;
+}
+
+function normalizeRole(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function hydrateAssignmentStaff(users) {
+  const safeUsers = Array.isArray(users) ? users : [];
+  const activeUsers = safeUsers.filter((user) => Boolean(user?.status));
+
+  const housekeeping = activeUsers
+    .filter((user) => normalizeRole(user?.role).includes('housekeeping'))
+    .map((user) => String(user?.username || '').trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  const maintenance = activeUsers
+    .filter((user) => normalizeRole(user?.role).includes('maintenance'))
+    .map((user) => String(user?.username || '').trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  assignmentStaff = {
+    housekeeping: [...new Set(housekeeping)],
+    maintenance: [...new Set(maintenance)],
+  };
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;');
+}
+
+function assignedStaffSelectOptions() {
+  const housekeepingOptions = (assignmentStaff.housekeeping || [])
+    .map((name) => `<option value="${escapeAttr(name)}" data-module="housekeeping">${escapeHtml(name)} (Housekeeping)</option>`)
+    .join('');
+
+  const maintenanceOptions = (assignmentStaff.maintenance || [])
+    .map((name) => `<option value="${escapeAttr(name)}" data-module="maintenance">${escapeHtml(name)} (Maintenance)</option>`)
+    .join('');
+
+  if (!housekeepingOptions && !maintenanceOptions) {
+    return '<option value="">No available staff</option>';
+  }
+
+  return `
+    <option value="">Select staff</option>
+    ${housekeepingOptions}
+    ${maintenanceOptions}
+  `;
 }
 
 async function checkLowStockTransitions() {
@@ -324,6 +384,88 @@ async function checkHousekeepingUsageNotifications() {
   }
 }
 
+async function checkGuestRequestNotifications() {
+  try {
+    const res = await fetch('/workflow/notifications?audience=MANAGER');
+    if (!res.ok) {
+      return;
+    }
+
+    const notifications = await res.json();
+    const guestRequestNotifications = Array.isArray(notifications) 
+      ? notifications.filter((n) => String(n?.notificationType || '').toUpperCase() === 'REQUEST_PLACED')
+      : [];
+    const currentIds = new Set(guestRequestNotifications.map((notification) => Number(notification.id)));
+
+    if (!hasGuestRequestBaseline) {
+      knownGuestRequestNotificationIds = currentIds;
+      hasGuestRequestBaseline = true;
+      return;
+    }
+
+    const newGuestRequestNotifications = guestRequestNotifications.filter(
+      (notification) => !knownGuestRequestNotificationIds.has(Number(notification.id))
+    );
+
+    newGuestRequestNotifications.forEach((notification) => {
+      const requestId = String(notification?.requestId || 'Request');
+      const message = String(notification?.message || 'A new guest request has been placed.');
+
+      unseenNotificationCount += 1;
+      addNotificationFeedItem(`${requestId}: ${message}`);
+      showToast('New Guest Request', message);
+      tryShowBrowserNotification('New Guest Request', message);
+    });
+
+    updateNotificationBadge();
+    knownGuestRequestNotificationIds = currentIds;
+  } catch (err) {
+    console.error('Could not check guest request notifications', err);
+  }
+}
+
+async function checkTaskCompletionNotifications() {
+  try {
+    const res = await fetch('/workflow/notifications?audience=MANAGER');
+    if (!res.ok) {
+      return;
+    }
+
+    const notifications = await res.json();
+    const taskCompletionNotifications = Array.isArray(notifications) 
+      ? notifications.filter((n) => String(n?.notificationType || '').toUpperCase() === 'TASK_COMPLETED')
+      : [];
+    const currentIds = new Set(taskCompletionNotifications.map((notification) => Number(notification.id)));
+
+    if (!hasTaskCompletionBaseline) {
+      knownTaskCompletionNotificationIds = currentIds;
+      hasTaskCompletionBaseline = true;
+      return;
+    }
+
+    const newTaskCompletionNotifications = taskCompletionNotifications.filter(
+      (notification) => !knownTaskCompletionNotificationIds.has(Number(notification.id))
+    );
+
+    newTaskCompletionNotifications.forEach((notification) => {
+      const requestId = String(notification?.requestId || 'Task');
+      const message = String(notification?.message || 'A task has been completed.');
+      const department = String(notification?.department || '');
+      const title = department ? `${department} Task Completed` : 'Task Completed';
+
+      unseenNotificationCount += 1;
+      addNotificationFeedItem(`${requestId}: ${message}`);
+      showToast(title, message);
+      tryShowBrowserNotification(title, message);
+    });
+
+    updateNotificationBadge();
+    knownTaskCompletionNotificationIds = currentIds;
+  } catch (err) {
+    console.error('Could not check task completion notifications', err);
+  }
+}
+
 async function pollDashboardLiveUpdates() {
   if (pollInFlight) {
     return;
@@ -334,6 +476,8 @@ async function pollDashboardLiveUpdates() {
     await Promise.all([
       loadDashboardMetrics(),
       loadApprovalTables(),
+      checkGuestRequestNotifications(),
+      checkTaskCompletionNotifications(),
       checkLowStockTransitions(),
       checkSupplierPoNotifications(),
       checkReceivedPoNotifications(),
@@ -438,17 +582,21 @@ function setupNotificationInteractions() {
 
 async function loadApprovalTables() {
   try {
-    const [guestRoutingRes, housekeepingRes, maintenanceRes, inventoryRes] = await Promise.all([
+    const [guestRoutingRes, usersRes, housekeepingRes, maintenanceRes, inventoryRes] = await Promise.all([
       fetch('/guestservice/routing-pending'),
+      fetch('/auth/users'),
       fetch('/housekeeping/list'),
       fetch('/maintenance/list'),
       fetch('/inventory/low-stock-pending')
     ]);
 
     const routingRequests = guestRoutingRes.ok ? await guestRoutingRes.json() : [];
+    const users = usersRes.ok ? await usersRes.json() : [];
     const housekeepingTasks = housekeepingRes.ok ? await housekeepingRes.json() : [];
     const maintenanceTickets = maintenanceRes.ok ? await maintenanceRes.json() : [];
     const inventoryItems = inventoryRes.ok ? await inventoryRes.json() : [];
+
+    hydrateAssignmentStaff(users);
 
     const guestRoutingBody = document.getElementById('guestRoutingTableBody');
     if (guestRoutingBody) {
@@ -460,9 +608,11 @@ async function loadApprovalTables() {
             <td>${escapeHtml(request.request)}</td>
             <td>${escapeHtml(formatDateTime(request.requestDateTime))}</td>
             <td>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="approve-btn" data-module="guest-route" data-route="housekeeping" data-requestid="${escapeHtml(request.requestId)}">Housekeeping</button>
-                <button type="button" class="approve-btn" data-module="guest-route" data-route="maintenance" data-requestid="${escapeHtml(request.requestId)}">Maintenance</button>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select class="guest-route-staff-select" data-requestid="${escapeAttr(request.requestId)}">
+                  ${assignedStaffSelectOptions()}
+                </select>
+                <button type="button" class="approve-btn" data-module="guest-route" data-action="route-with-staff" data-requestid="${escapeHtml(request.requestId)}">Assign</button>
               </div>
             </td>
           </tr>
@@ -522,7 +672,7 @@ async function loadApprovalTables() {
   }
 }
 
-async function updateApproval(moduleName, id, approved) {
+async function updateApproval(moduleName, id, approved, rowElement = null) {
   let url;
   if (moduleName === 'housekeeping') {
     url = '/housekeeping/approve';
@@ -536,19 +686,42 @@ async function updateApproval(moduleName, id, approved) {
   }
 
   const body = moduleName === 'inventory' ? { id } : { id, approved, role: currentRole };
-  const data = await apiPost(url, body);
-  if (!data.success) {
-    alert(data.message || 'Approval update failed.');
-    return;
-  }
   
-  loadApprovalTables();
+  try {
+    const data = await apiPost(url, body);
+    if (!data.success) {
+      alert(data.message || 'Approval update failed.');
+      return;
+    }
+    
+    // Immediately remove the row from UI if provided
+    if (rowElement && rowElement instanceof HTMLElement) {
+      const tbody = rowElement.parentElement;
+      rowElement.style.opacity = '0.5';
+      rowElement.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => {
+        rowElement.remove();
+        
+        // If table is now empty, reload to show empty message
+        if (tbody && tbody.children.length === 0) {
+          loadApprovalTables();
+        }
+      }, 300);
+    } else {
+      // Fallback: reload table if row not provided
+      loadApprovalTables();
+    }
+  } catch (err) {
+    console.error('Error updating approval:', err);
+    alert('An error occurred while updating approval.');
+  }
 }
 
-async function routeGuestRequest(requestId, targetModule) {
+async function routeGuestRequest(requestId, targetModule, assignedStaff) {
   const data = await apiPost('/guestservice/route', {
     requestId,
     targetModule,
+    assignedStaff: assignedStaff || '',
     role: currentRole,
   });
 
@@ -557,6 +730,7 @@ async function routeGuestRequest(requestId, targetModule) {
     return;
   }
 
+  showToast('Request Assigned', `Request ${requestId} has been routed to ${targetModule}.`);
   await Promise.all([loadDashboardMetrics(), loadApprovalTables()]);
 }
 
@@ -742,6 +916,8 @@ loadUsers();
 initializeDashboard();
 setupNotificationInteractions();
 checkLowStockTransitions();
+checkGuestRequestNotifications();
+checkTaskCompletionNotifications();
 startLivePolling();
 
 // ── Create User Account ──────────────────────────────────────────────────
@@ -775,6 +951,35 @@ document.addEventListener('click', async (event) => {
 
   if (moduleName === 'guest-route') {
     const requestId = target.dataset.requestid;
+    const action = target.dataset.action;
+    
+    if (action === 'route-with-staff') {
+      const row = target.closest('tr');
+      const staffSelect = row?.querySelector('.guest-route-staff-select');
+      
+      if (!(staffSelect instanceof HTMLSelectElement)) {
+        alert('Could not read staff selection.');
+        return;
+      }
+      
+      const assignedStaff = staffSelect.value;
+      const selectedOption = staffSelect.selectedOptions[0];
+      const selectedModule = selectedOption?.dataset?.module;
+      
+      if (!assignedStaff) {
+        alert('Please select a staff member.');
+        return;
+      }
+      
+      if (!selectedModule) {
+        alert('Invalid staff selection.');
+        return;
+      }
+      
+      await routeGuestRequest(requestId, selectedModule, assignedStaff);
+      return;
+    }
+    
     const routeTo = target.dataset.route;
     if (!requestId || !routeTo) return;
     await routeGuestRequest(requestId, routeTo);
@@ -785,7 +990,10 @@ document.addEventListener('click', async (event) => {
   const approved = String(target.dataset.approved) === 'true';
 
   if (!moduleName || Number.isNaN(id)) return;
-  await updateApproval(moduleName, id, approved);
+  
+  // Get the row element for immediate UI feedback
+  const row = target.closest('tr');
+  await updateApproval(moduleName, id, approved, row);
 });
 
 function formatDateTime(value) {
