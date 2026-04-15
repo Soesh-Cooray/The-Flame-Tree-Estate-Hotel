@@ -1,5 +1,8 @@
 package project.flametreehotel.Model;
 
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -18,4 +21,10 @@ public class orders {
     private String item;
     private int qty;
     private String status;
+    private String inventoryReviewStatus;
+    private String inventoryReviewedBy;
+    private LocalDateTime inventoryReviewedAt;
+
+    @Column(length = 500)
+    private String inventoryRejectionReason;
 }

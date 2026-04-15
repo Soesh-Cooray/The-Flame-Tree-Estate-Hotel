@@ -2,6 +2,7 @@ package project.flametreehotel.Model;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -24,6 +25,12 @@ public class inventoryApprovalNotification {
     private LocalDateTime receivedAt;
     private String approvedBy;
     private String notificationStatus;
+    private String inventoryReviewStatus;
+    private LocalDateTime inventoryReviewedAt;
+    private String inventoryReviewedBy;
+
+    @Column(length = 500)
+    private String inventoryRejectionReason;
     private boolean supplierPoDismissed;
     private Integer linkedOrderId;
 }
