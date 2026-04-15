@@ -26,10 +26,21 @@ public class receivedStockReviewService {
         String itemName = String.valueOf(decision.getOrDefault("itemName", ""));
         int qty = Number.class.cast(decision.getOrDefault("qty", 0)).intValue();
 
-        inventoryService.receiveStock(itemName, qty);
+        try {
+            inventoryService.receiveStock(itemName, qty);
+            decision.put("inventoryUpdated", true);
+            decision.put("success", true);
+            decision.put("message", itemName + " approved and added to inventory.");
+        } catch (RuntimeException ex) {
+            decision.put("inventoryUpdated", false);
+            decision.put("success", true);
+            if ("Inventory item not found for received stock.".equals(ex.getMessage())) {
+                decision.put("message", "This entry item is not on the inventory list. Please add it manually");
+            } else {
+                decision.put("message", "Stock was approved, but inventory could not be updated automatically.");
+            }
+        }
 
-        decision.put("success", true);
-        decision.put("message", itemName + " approved and added to inventory.");
         return decision;
     }
 
