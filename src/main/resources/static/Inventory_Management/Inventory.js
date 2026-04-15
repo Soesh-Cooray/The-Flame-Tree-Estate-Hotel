@@ -36,6 +36,14 @@ const inventoryReceivedPoBadge = document.getElementById('inventoryReceivedPoBad
 const inventoryReceivedPoList = document.getElementById('inventoryReceivedPoList');
 const inventoryUsageBadge = document.getElementById('inventoryUsageBadge');
 const inventoryUsageList = document.getElementById('inventoryUsageList');
+const receivedStockApprovalBadge = document.getElementById('receivedStockApprovalBadge');
+const receivedStockApprovalBody = document.getElementById('receivedStockApprovalBody');
+const rejectReceivedStockDialog = document.getElementById('rejectReceivedStockDialog');
+const rejectReceivedStockForm = document.getElementById('rejectReceivedStockForm');
+const rejectReceivedStockNotificationId = document.getElementById('rejectReceivedStockNotificationId');
+const rejectReceivedStockReason = document.getElementById('rejectReceivedStockReason');
+const rejectReceivedStockSummary = document.getElementById('rejectReceivedStockSummary');
+const cancelRejectReceivedStockBtn = document.getElementById('cancelRejectReceivedStockBtn');
 const inventoryToastStack = document.getElementById('inventoryToastStack');
 const inventoryClearAlertsBtn = document.getElementById('inventoryClearAlertsBtn');
 
@@ -58,6 +66,8 @@ let hasReceivedPoBaseline = false;
 let knownReceivedPoNotificationIds = new Set();
 let hasHousekeepingUsageBaseline = false;
 let knownHousekeepingUsageIds = new Set();
+let hasReceivedStockApprovalBaseline = false;
+let knownReceivedStockApprovalSignatures = new Set();
 let clearedApprovalIds = loadClearedIdSet(STORAGE_KEYS.approvals);
 let clearedSupplierPoNotificationIds = loadClearedIdSet(STORAGE_KEYS.supplierPo);
 let clearedReceivedPoNotificationIds = loadClearedIdSet(STORAGE_KEYS.receivedPo);
@@ -66,6 +76,7 @@ let latestApprovalNotifications = [];
 let latestSupplierPoNotifications = [];
 let latestReceivedPoNotifications = [];
 let latestHousekeepingUsageNotifications = [];
+let latestReceivedStockApprovals = [];
 let inventoryItemsCache = [];
 
 function loadClearedIdSet(storageKey) {
@@ -232,6 +243,16 @@ function formatDateTime(value) {
   return date.toLocaleString();
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text ?? '';
+  return div.innerHTML;
+}
+
+function getReceivedStockSignature(notification) {
+  return `${notification?.id || ''}:${notification?.receivedAt || ''}`;
+}
+
 function showInventoryToast(title, message) {
   if (!inventoryToastStack) {
     return;
@@ -252,6 +273,13 @@ function updateApprovalBadge(currentVisibleCount) {
     return;
   }
   inventoryApprovalBadge.textContent = String(currentVisibleCount);
+}
+
+function updateReceivedStockApprovalBadge(currentVisibleCount) {
+  if (!receivedStockApprovalBadge) {
+    return;
+  }
+  receivedStockApprovalBadge.textContent = String(currentVisibleCount);
 }
 
 function getVisibleManagerApprovalCount() {
@@ -278,11 +306,16 @@ function getVisibleHousekeepingUsageCount() {
   ).length;
 }
 
+function getVisibleReceivedStockApprovalCount() {
+  return latestReceivedStockApprovals.length;
+}
+
 function updateLiveAlertsCounter() {
   const totalVisible = getVisibleManagerApprovalCount()
     + getVisibleSupplierPoCount()
     + getVisibleReceivedPoCount()
-    + getVisibleHousekeepingUsageCount();
+    + getVisibleHousekeepingUsageCount()
+    + getVisibleReceivedStockApprovalCount();
   updateApprovalBadge(totalVisible);
 }
 
@@ -397,6 +430,155 @@ function renderHousekeepingUsageFeed(notifications) {
     li.textContent = `${staffName} used ${usedQty} units of ${itemName}${damagedSuffix} at ${usedAt}.`;
     inventoryUsageList.appendChild(li);
   });
+}
+
+function renderReceivedStockApprovalQueue(notifications) {
+  if (!receivedStockApprovalBody) {
+    return;
+  }
+
+  receivedStockApprovalBody.innerHTML = '';
+  updateReceivedStockApprovalBadge(notifications.length);
+
+  if (notifications.length === 0) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = '<td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">No received stock is waiting for inventory approval.</td>';
+    receivedStockApprovalBody.appendChild(emptyRow);
+    return;
+  }
+
+  notifications.forEach((notification) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${escapeHtml(String(notification?.itemName || 'Inventory item'))}</td>
+      <td>${escapeHtml(String(notification?.supplier || 'Supplier team'))}</td>
+      <td>${Number(notification?.qty || 0)}</td>
+      <td>${escapeHtml(formatDateTime(notification?.receivedAt))}</td>
+      <td>
+        <div class="row-actions">
+          <button type="button" class="small-btn" data-action="approve-received-stock" data-notification-id="${notification.id}">Approve</button>
+          <button type="button" class="small-btn delete-btn" data-action="reject-received-stock" data-notification-id="${notification.id}">Reject</button>
+        </div>
+      </td>
+    `;
+    receivedStockApprovalBody.appendChild(row);
+  });
+}
+
+async function loadReceivedStockApprovals() {
+  const res = await fetch('/inventory/received-stock-pending-approval');
+  if (!res.ok) {
+    throw new Error('Failed to load received stock approvals.');
+  }
+
+  return res.json();
+}
+
+async function pollReceivedStockApprovals() {
+  try {
+    const notifications = await loadReceivedStockApprovals();
+    latestReceivedStockApprovals = Array.isArray(notifications) ? notifications : [];
+    const currentSignatures = new Set(latestReceivedStockApprovals.map((notification) => getReceivedStockSignature(notification)));
+
+    if (!hasReceivedStockApprovalBaseline) {
+      hasReceivedStockApprovalBaseline = true;
+      knownReceivedStockApprovalSignatures = currentSignatures;
+      renderReceivedStockApprovalQueue(latestReceivedStockApprovals);
+      updateLiveAlertsCounter();
+      return;
+    }
+
+    latestReceivedStockApprovals
+      .filter((notification) => !knownReceivedStockApprovalSignatures.has(getReceivedStockSignature(notification)))
+      .forEach((notification) => {
+        const itemName = String(notification?.itemName || 'Inventory item');
+        const supplier = String(notification?.supplier || 'Supplier team');
+        const qty = Number(notification?.qty || 0);
+        showInventoryToast(
+          'Received Stock Pending Review',
+          `${itemName} from ${supplier} (${qty} units) is ready for approval.`
+        );
+      });
+
+    renderReceivedStockApprovalQueue(latestReceivedStockApprovals);
+    updateLiveAlertsCounter();
+    knownReceivedStockApprovalSignatures = currentSignatures;
+  } catch (err) {
+    showMessage('Error loading received stock approvals: ' + err.message);
+  }
+}
+
+function openRejectReceivedStockDialog(notification) {
+  if (rejectReceivedStockNotificationId) {
+    rejectReceivedStockNotificationId.value = String(notification.id);
+  }
+
+  if (rejectReceivedStockSummary) {
+    const itemName = String(notification?.itemName || 'Inventory item');
+    const supplier = String(notification?.supplier || 'Supplier team');
+    const qty = Number(notification?.qty || 0);
+    rejectReceivedStockSummary.textContent = `${itemName} from ${supplier} (${qty} units)`;
+  }
+
+  if (rejectReceivedStockReason) {
+    rejectReceivedStockReason.value = '';
+  }
+
+  if (rejectReceivedStockDialog) {
+    rejectReceivedStockDialog.showModal();
+  }
+}
+
+async function approveReceivedStock(notificationId) {
+  try {
+    const res = await fetch('/inventory/received-stock/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notificationId,
+        reviewedBy: 'Inventory'
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to approve received stock.');
+    }
+
+    showMessage(data.message || 'Received stock approved.');
+    showInventoryToast('Stock Approved', data.message || 'Received stock approved.');
+    await syncInventorySnapshot();
+    await pollReceivedStockApprovals();
+    broadcastInventoryUpdate();
+  } catch (err) {
+    showMessage(err.message);
+  }
+}
+
+async function rejectReceivedStock(notificationId, rejectionReason) {
+  try {
+    const res = await fetch('/inventory/received-stock/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notificationId,
+        rejectionReason,
+        reviewedBy: 'Inventory'
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to reject received stock.');
+    }
+
+    showMessage(data.message || 'Received stock rejected.');
+    showInventoryToast('Stock Rejected', data.message || 'Received stock rejected.');
+    await pollReceivedStockApprovals();
+    broadcastInventoryUpdate();
+  } catch (err) {
+    showMessage(err.message);
+  }
 }
 
 async function loadManagerApprovalNotifications() {
@@ -631,11 +813,13 @@ function startApprovalPolling() {
     pollSupplierPoNotificationsForInventory();
     pollReceivedPoNotificationsForInventory();
     pollHousekeepingUsageNotificationsForInventory();
+    pollReceivedStockApprovals();
   }, INVENTORY_ALERT_POLL_MS);
 
   pollSupplierPoNotificationsForInventory();
   pollReceivedPoNotificationsForInventory();
   pollHousekeepingUsageNotificationsForInventory();
+  pollReceivedStockApprovals();
 
   window.addEventListener('beforeunload', () => {
     if (inventoryAlertTimer !== null) {
@@ -664,6 +848,72 @@ function startApprovalPolling() {
 
   if (inventoryClearAlertsBtn) {
     inventoryClearAlertsBtn.addEventListener('click', clearApprovalAlerts);
+  }
+
+  if (receivedStockApprovalBody) {
+    receivedStockApprovalBody.addEventListener('click', async (event) => {
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      const action = target.getAttribute('data-action');
+      const notificationIdValue = target.getAttribute('data-notification-id');
+      if (!action || !notificationIdValue) {
+        return;
+      }
+
+      const notificationId = Number(notificationIdValue);
+      const notification = latestReceivedStockApprovals.find((item) => Number(item?.id) === notificationId);
+      if (!notification) {
+        showMessage('Received stock entry no longer exists.');
+        await pollReceivedStockApprovals();
+        return;
+      }
+
+      if (action === 'approve-received-stock') {
+        await approveReceivedStock(notificationId);
+        return;
+      }
+
+      if (action === 'reject-received-stock') {
+        openRejectReceivedStockDialog(notification);
+      }
+    });
+  }
+
+  if (cancelRejectReceivedStockBtn) {
+    cancelRejectReceivedStockBtn.addEventListener('click', () => {
+      if (rejectReceivedStockDialog) {
+        rejectReceivedStockDialog.close();
+      }
+    });
+  }
+
+  if (rejectReceivedStockForm) {
+    rejectReceivedStockForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const notificationId = Number(rejectReceivedStockNotificationId?.value || 0);
+      const rejectionReason = String(rejectReceivedStockReason?.value || '').trim();
+
+      if (!notificationId) {
+        showMessage('Received stock entry not found.');
+        return;
+      }
+
+      if (!rejectionReason) {
+        showMessage('Rejection reason is required.');
+        return;
+      }
+
+      if (rejectReceivedStockDialog) {
+        rejectReceivedStockDialog.close();
+      }
+
+      await rejectReceivedStock(notificationId, rejectionReason);
+    });
   }
 }
 

@@ -100,6 +100,31 @@
           </table>
         </div>
       </section>
+
+        <section class="panel full-width">
+          <h2>Approvals from Inventory</h2>
+          <div class="supplier-alert-head">
+            <p class="supplier-alert-note">Live updates when inventory approves or rejects completed purchase orders.</p>
+            <div class="supplier-alert-actions">
+              <span class="supplier-alert-badge-wrap">Inventory Decisions: <strong id="supplierInventoryDecisionBadge">0</strong></span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Supplier</th>
+                  <th>Qty</th>
+                  <th>Status</th>
+                  <th>Rejection Reason</th>
+                  <th>Reviewed At</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryDecisionBody"></tbody>
+            </table>
+          </div>
+        </section>
     </main>
   </div>
 

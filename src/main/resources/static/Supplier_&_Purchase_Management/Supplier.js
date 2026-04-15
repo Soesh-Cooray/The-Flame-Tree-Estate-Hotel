@@ -15,9 +15,15 @@ let latestSupplierNotifications = [];
 let purchaseOrdersCache = [];
 let nextPoIdCache = '';
 let nextPoIdInFlight = null;
+let supplierSyncInFlight = false;
+let supplierInventoryDecisionBaseline = false;
+let knownInventoryDecisionSignatures = new Set();
+let latestInventoryDecisions = [];
 
 const supplierApprovalBadge = document.getElementById('supplierApprovalBadge');
 const supplierApprovalFeed = document.getElementById('supplierApprovalFeed');
+const supplierInventoryDecisionBadge = document.getElementById('supplierInventoryDecisionBadge');
+const inventoryDecisionBody = document.getElementById('inventoryDecisionBody');
 const supplierToastStack = document.getElementById('supplierToastStack');
 const supplierClearAlertsBtn = document.getElementById('supplierClearAlertsBtn');
 
@@ -98,6 +104,112 @@ function renderTable(pos) {
     `;
     tbody.appendChild(row);
   });
+}
+
+function getInventoryDecisionSignature(decision) {
+  return `${decision?.id || ''}:${decision?.inventoryReviewedAt || ''}:${decision?.inventoryReviewStatus || ''}`;
+}
+
+function updateInventoryDecisionBadge(currentVisibleCount) {
+  if (!supplierInventoryDecisionBadge) {
+    return;
+  }
+
+  supplierInventoryDecisionBadge.textContent = String(currentVisibleCount);
+}
+
+function renderInventoryDecisionFeed(decisions) {
+  if (!inventoryDecisionBody) {
+    return;
+  }
+
+  inventoryDecisionBody.innerHTML = '';
+  updateInventoryDecisionBadge(decisions.length);
+
+  if (decisions.length === 0) {
+    inventoryDecisionBody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+          No inventory decisions yet.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  decisions.forEach((decision) => {
+    const status = String(decision?.inventoryReviewStatus || 'Pending');
+    const statusClass = status === 'Approved' ? 'done' : 'partial';
+    const rejectionReason = String(decision?.inventoryRejectionReason || '-');
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${escapeHtml(decision.item || '')}</td>
+      <td>${escapeHtml(decision.supplier || '')}</td>
+      <td>${Number(decision.qty ?? 0)}</td>
+      <td><span class="tag ${statusClass}">${escapeHtml(status)}</span></td>
+      <td>${escapeHtml(rejectionReason)}</td>
+      <td>${escapeHtml(formatDateTime(decision.inventoryReviewedAt))}</td>
+    `;
+    inventoryDecisionBody.appendChild(row);
+  });
+}
+
+async function loadInventoryDecisions() {
+  const res = await fetch('/orders/inventory-review-decisions');
+  if (!res.ok) {
+    throw new Error('Failed to load inventory decisions.');
+  }
+
+  return res.json();
+}
+
+async function pollInventoryDecisions() {
+  try {
+    const decisions = await loadInventoryDecisions();
+    latestInventoryDecisions = Array.isArray(decisions) ? decisions : [];
+    const currentSignatures = new Set(latestInventoryDecisions.map((decision) => getInventoryDecisionSignature(decision)));
+
+    if (!supplierInventoryDecisionBaseline) {
+      supplierInventoryDecisionBaseline = true;
+      knownInventoryDecisionSignatures = currentSignatures;
+      renderInventoryDecisionFeed(latestInventoryDecisions);
+      return;
+    }
+
+    latestInventoryDecisions
+      .filter((decision) => !knownInventoryDecisionSignatures.has(getInventoryDecisionSignature(decision)))
+      .forEach((decision) => {
+        const itemName = String(decision?.item || 'Purchase order');
+        const supplier = String(decision?.supplier || 'Supplier');
+        const status = String(decision?.inventoryReviewStatus || 'Updated');
+        const reason = String(decision?.inventoryRejectionReason || '');
+        const reasonSuffix = reason ? ` Reason: ${reason}` : '';
+
+        showSupplierToast(
+          'Inventory Decision Received',
+          `${itemName} from ${supplier} was ${status.toLowerCase()}.${reasonSuffix}`
+        );
+      });
+
+    renderInventoryDecisionFeed(latestInventoryDecisions);
+    knownInventoryDecisionSignatures = currentSignatures;
+  } catch (err) {
+    showMessage('Error loading inventory decisions: ' + err.message);
+  }
+}
+
+async function syncSupplierSnapshot() {
+  if (supplierSyncInFlight) {
+    return;
+  }
+
+  supplierSyncInFlight = true;
+  try {
+    await loadAndRender();
+  } finally {
+    supplierSyncInFlight = false;
+  }
 }
 
 async function loadNotifications() {
@@ -204,9 +316,13 @@ function startSupplierApprovalPolling() {
     return;
   }
 
+  syncSupplierSnapshot();
   pollSupplierApprovals();
+  pollInventoryDecisions();
   supplierAlertTimer = window.setInterval(() => {
+    syncSupplierSnapshot();
     pollSupplierApprovals();
+    pollInventoryDecisions();
   }, SUPPLIER_ALERT_POLL_MS);
 
   window.addEventListener('beforeunload', () => {
