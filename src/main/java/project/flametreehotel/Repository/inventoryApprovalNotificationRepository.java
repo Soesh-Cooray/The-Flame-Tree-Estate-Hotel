@@ -10,6 +10,9 @@ import project.flametreehotel.Model.inventoryApprovalNotification;
 public interface inventoryApprovalNotificationRepository extends JpaRepository<inventoryApprovalNotification, Integer> {
     List<inventoryApprovalNotification> findByNotificationStatusOrderByApprovedAtDesc(String notificationStatus);
 
+        List<inventoryApprovalNotification> findByNotificationStatusAndInventoryReviewStatusIsNullOrderByReceivedAtDesc(
+                        String notificationStatus);
+
     List<inventoryApprovalNotification> findByNotificationStatusAndSupplierPoDismissedFalseOrderByApprovedAtDesc(
             String notificationStatus);
 

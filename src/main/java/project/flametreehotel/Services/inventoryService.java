@@ -143,6 +143,22 @@ public class inventoryService {
         return repository.save(item);
     }
 
+    public inventory receiveStock(String itemName, int receivedQty) {
+        if (receivedQty < 1) {
+            throw new RuntimeException("Received quantity must be at least 1.");
+        }
+
+        inventory item = repository.findFirstByItemIgnoreCase(itemName)
+                .orElseThrow(() -> new RuntimeException("Inventory item not found for received stock."));
+
+        int updatedStock = item.getInStock() + receivedQty;
+        item.setInStock(updatedStock);
+        item.setApproved(false);
+        item.setStatus(computeStatus(updatedStock, item.getMinLevel(), item.getDamaged(), item.getMissing()));
+
+        return repository.save(item);
+    }
+
     private static final int LOW_STOCK_BUFFER = 10;
 
     private void validateStockBreakdown(int inStock, int damaged, int missing) {

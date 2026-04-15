@@ -18,6 +18,7 @@ import project.flametreehotel.Model.inventoryApprovalNotification;
 import project.flametreehotel.Services.housekeepingService;
 import project.flametreehotel.Services.inventoryApprovalNotificationService;
 import project.flametreehotel.Services.inventoryService;
+import project.flametreehotel.Services.receivedStockReviewService;
 
 @RestController
 @RequestMapping("/inventory")
@@ -27,6 +28,7 @@ public class inventroyController {
     private final inventoryService service;
     private final inventoryApprovalNotificationService notificationService;
     private final housekeepingService housekeepingService;
+    private final receivedStockReviewService receivedStockReviewService;
 
     /**
      * GET /inventory/list
@@ -247,6 +249,69 @@ public class inventroyController {
     @GetMapping("/received-low-stock-notifications")
     public ResponseEntity<List<Map<String, Object>>> getReceivedLowStockNotifications() {
         return ResponseEntity.ok(notificationService.listReceivedWithOrderDetails());
+    }
+
+    /**
+     * GET /inventory/received-stock-pending-approval
+     * Returns completed orders waiting for inventory approval or rejection.
+     */
+    @GetMapping("/received-stock-pending-approval")
+    public ResponseEntity<List<Map<String, Object>>> getReceivedStockPendingApproval() {
+        return ResponseEntity.ok(receivedStockReviewService.listPendingApprovals());
+    }
+
+    /**
+     * POST /inventory/received-stock/approve
+     * Body: { "notificationId": 1, "reviewedBy": "Inventory" }
+     */
+    @PostMapping("/received-stock/approve")
+    public ResponseEntity<Map<String, Object>> approveReceivedStock(@RequestBody Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (body.get("notificationId") == null) {
+            response.put("success", false);
+            response.put("message", "notificationId is required.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        int notificationId = ((Number) body.get("notificationId")).intValue();
+        String reviewedBy = body.get("reviewedBy") == null ? "Inventory" : String.valueOf(body.get("reviewedBy"));
+
+        try {
+            return ResponseEntity.ok(receivedStockReviewService.approveReceivedStock(notificationId, reviewedBy));
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * POST /inventory/received-stock/reject
+     * Body: { "notificationId": 1, "rejectionReason": "...", "reviewedBy": "Inventory" }
+     */
+    @PostMapping("/received-stock/reject")
+    public ResponseEntity<Map<String, Object>> rejectReceivedStock(@RequestBody Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (body.get("notificationId") == null) {
+            response.put("success", false);
+            response.put("message", "notificationId is required.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        int notificationId = ((Number) body.get("notificationId")).intValue();
+        String reviewedBy = body.get("reviewedBy") == null ? "Inventory" : String.valueOf(body.get("reviewedBy"));
+        String rejectionReason = body.get("rejectionReason") == null ? "" : String.valueOf(body.get("rejectionReason"));
+
+        try {
+            return ResponseEntity.ok(receivedStockReviewService.rejectReceivedStock(notificationId, rejectionReason,
+                    reviewedBy));
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     /**

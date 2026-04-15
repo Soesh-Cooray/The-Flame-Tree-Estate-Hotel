@@ -116,6 +116,30 @@
         </div>
         <p id="inventoryMessage" aria-live="polite"></p>
       </section>
+
+      <section class="panel full-width">
+        <h2>Approve Received Stock</h2>
+        <div class="approval-alerts-head">
+          <p class="approval-alerts-note">Completed purchase orders waiting for inventory approval or rejection.</p>
+          <div class="approval-alert-actions">
+            <span class="approval-badge-wrap">Pending Review: <strong id="receivedStockApprovalBadge">0</strong></span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Supplier</th>
+                <th>Qty</th>
+                <th>Received At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="receivedStockApprovalBody"></tbody>
+          </table>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -221,6 +245,24 @@
       <div class="dialog-actions">
         <button type="button" class="secondary-btn" id="cancelUpdateDialogBtn">Cancel</button>
         <button type="submit">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="rejectReceivedStockDialog" class="inventory-dialog">
+    <form class="form" id="rejectReceivedStockForm" method="dialog">
+      <h3>Reject Received Stock</h3>
+
+      <input id="rejectReceivedStockNotificationId" type="hidden" />
+
+      <p id="rejectReceivedStockSummary"></p>
+
+      <label for="rejectReceivedStockReason">Rejection Reason</label>
+      <textarea id="rejectReceivedStockReason" rows="4" placeholder="Explain why the received stock is rejected" required></textarea>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="cancelRejectReceivedStockBtn">Cancel</button>
+        <button type="submit">Reject Stock</button>
       </div>
     </form>
   </dialog>

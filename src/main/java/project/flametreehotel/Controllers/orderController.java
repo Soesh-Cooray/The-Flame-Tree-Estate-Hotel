@@ -36,6 +36,11 @@ public class orderController {
         return ResponseEntity.ok(Map.of("poid", service.generateNextPoId()));
     }
 
+    @GetMapping("/inventory-review-decisions")
+    public ResponseEntity<List<Map<String, Object>>> inventoryReviewDecisions() {
+        return ResponseEntity.ok(service.getInventoryReviewDecisions());
+    }
+
     /**
      * POST /orders/add
      * Body: { "supplier": "...", "item": "...", "qty": 0, "status": "...", "notificationId": 1 }
